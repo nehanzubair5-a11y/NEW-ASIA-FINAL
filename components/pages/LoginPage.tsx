@@ -9,11 +9,15 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
   const [password, setPassword] = useState('password');
   const [role, setRole] = useState<string>('Admin');
   const [isSeeding, setIsSeeding] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { login } = useAuth();
   const { logAction } = useAppContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError('');
     try {
       const loggedInUser = await login(email, role, password);
       
@@ -22,8 +26,10 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
       } else {
           logAction(ActionType.Login, 'Users', loggedInUser._id, `User ${loggedInUser.name} logged in.`, loggedInUser);
       }
-    } catch (error) {
-      alert("Login failed. Please check your credentials. If the database is empty, click 'Seed Database' first.");
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -61,6 +67,14 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Please sign in to your account to continue.</p>
           </div>
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            {error && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm rounded-md">
+                {error}
+                {error.includes('not found') && (
+                  <span className="block mt-1">If the database is empty, click 'Seed Database' below.</span>
+                )}
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">Email Address</label>
               <input
@@ -92,9 +106,10 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
             <div>
               <button
                 type="submit"
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 hover:shadow-lg"
+                disabled={isLoading}
+                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 hover:shadow-lg disabled:opacity-50"
               >
-                Sign in
+                {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>
