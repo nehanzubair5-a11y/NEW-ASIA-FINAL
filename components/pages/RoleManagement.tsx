@@ -1,19 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import { useAppContext } from '../../hooks/useAppContext.ts';
-import { PlusIcon, EditIcon, UsersIcon, PrintIcon, ShieldIcon } from '../icons/Icons.tsx';
+import { PlusIcon, EditIcon, UsersIcon, PrintIcon, ShieldIcon, TrashIcon } from '../icons/Icons.tsx';
 import EmptyState from '../shared/EmptyState.tsx';
 import { Role } from '../../types.ts';
 import RoleModal from '../modals/RoleModal.tsx';
 import Tooltip from '../shared/Tooltip.tsx';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { printElementById } from '../../utils/print.ts';
+import ConfirmModal from '../modals/ConfirmModal.tsx';
 
 const RoleManagement: React.FC<{ showToast: (message: string, type: 'success' | 'error' | 'info') => void; }> = ({ showToast }) => {
-    const { roles, users, addRole, updateRole } = useAppContext();
+    const { roles, users, addRole, updateRole, deleteRole } = useAppContext();
     const { canManageRoles } = usePermissions();
     const [isModalOpen, setModalOpen] = useState(false);
     const [selectedRole, setSelectedRole] = useState<Role | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isConfirmOpen, setConfirmOpen] = useState(false);
+    const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
 
     const rolesWithUserCounts = useMemo(() => {
         return roles.map(role => ({
@@ -30,6 +33,23 @@ const RoleManagement: React.FC<{ showToast: (message: string, type: 'success' | 
     const handleEdit = (role: Role) => {
         setSelectedRole(role);
         setModalOpen(true);
+    };
+
+    const handleDeleteClick = (role: Role) => {
+        setRoleToDelete(role);
+        setConfirmOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!roleToDelete) return;
+        try {
+            await deleteRole(roleToDelete._id);
+            showToast('Role deleted successfully!', 'success');
+        } catch (error) {
+            showToast('Failed to delete role.', 'error');
+        }
+        setRoleToDelete(null);
+        setConfirmOpen(false);
     };
 
     const handleSave = async (roleData: Omit<Role, '_id'>, isEditing: boolean) => {
@@ -85,6 +105,13 @@ const RoleManagement: React.FC<{ showToast: (message: string, type: 'success' | 
                                         <EditIcon />
                                     </button>
                                 </Tooltip>
+                                {role.isEditable && (
+                                    <Tooltip content="Delete Role">
+                                        <button onClick={() => handleDeleteClick(role)} className="text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 p-1 rounded-full hover:bg-red-100 dark:hover:bg-slate-700 ml-2">
+                                            <TrashIcon />
+                                        </button>
+                                    </Tooltip>
+                                )}
                            </div>
                            <div className="flex-grow space-y-4">
                                 <div className="flex items-center space-x-3">
@@ -120,6 +147,13 @@ const RoleManagement: React.FC<{ showToast: (message: string, type: 'success' | 
             )}
 
             <RoleModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} onSave={handleSave} isSaving={isSaving} role={selectedRole} />
+            <ConfirmModal
+                isOpen={isConfirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={handleDeleteConfirm}
+                title="Delete Role"
+                message={`Are you sure you want to delete the role "${roleToDelete?.name}"? This action cannot be undone.`}
+            />
         </div>
     );
 };

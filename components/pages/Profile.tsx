@@ -10,10 +10,10 @@ import { printElementById } from '../../utils/print.ts';
 
 const Profile: React.FC<{ showToast: (message: string, type: 'success' | 'error' | 'info') => void; }> = ({ showToast }) => {
     const { user: currentUser, updateCurrentUser } = useAuth();
-    const { updateUser, deviceSessions } = useAppContext();
+    const { updateUser, deviceSessions, auditLogs } = useAppContext();
     const { dealers, bookings, stock } = useData();
     
-    const [formData, setFormData] = useState({ name: '', email: '', phone: '', whatsapp: '', address: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', phone: '', whatsapp: '', address: '', avatarUrl: '' });
     const [isSaving, setIsSaving] = useState(false);
     const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
     const [isSavingPassword, setIsSavingPassword] = useState(false);
@@ -27,9 +27,16 @@ const Profile: React.FC<{ showToast: (message: string, type: 'success' | 'error'
                 phone: currentUser.phone || '',
                 whatsapp: currentUser.whatsapp || '',
                 address: currentUser.address || '',
+                avatarUrl: currentUser.avatarUrl || '',
             });
         }
     }, [currentUser]);
+
+    const handleGenerateAvatar = () => {
+        const seed = Math.random().toString(36).substring(7);
+        const newAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
+        setFormData(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
+    };
 
     const associatedDealer = useMemo(() => {
         if (currentUser?.role === 'Dealer' && currentUser.dealerId) {
@@ -42,6 +49,11 @@ const Profile: React.FC<{ showToast: (message: string, type: 'success' | 'error'
         return deviceSessions.find(s => s.isCurrent);
     }, [deviceSessions]);
     
+    const userActivity = useMemo(() => {
+        if (!currentUser) return [];
+        return auditLogs.filter(log => log.userId === currentUser._id).slice(0, 5);
+    }, [auditLogs, currentUser]);
+
     const dealerStats = useMemo(() => {
         if (currentUser?.role !== 'Dealer' || !currentUser.dealerId) return null;
         
@@ -109,12 +121,19 @@ const Profile: React.FC<{ showToast: (message: string, type: 'success' | 'error'
         <div id="profile-page-content" className="space-y-8 max-w-6xl mx-auto">
              <div className="flex justify-between items-start">
                 <div className="flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-24 h-24 rounded-full bg-primary text-white flex items-center justify-center text-4xl font-bold flex-shrink-0 shadow-md">
-                        {currentUser.name.charAt(0).toUpperCase()}
+                    <div className="relative w-24 h-24 rounded-full bg-primary text-white flex items-center justify-center text-4xl font-bold flex-shrink-0 shadow-md overflow-hidden">
+                        {formData.avatarUrl ? (
+                            <img src={formData.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                            currentUser.name.charAt(0).toUpperCase()
+                        )}
                     </div>
                     <div>
                         <h2 className="text-4xl font-bold text-slate-800 dark:text-slate-100">{currentUser.name}</h2>
                         <p className="text-slate-500 dark:text-slate-400 text-lg">{currentUser.role}</p>
+                        <button type="button" onClick={handleGenerateAvatar} className="mt-2 text-sm text-primary hover:text-secondary font-medium transition-colors">
+                            Generate New Avatar
+                        </button>
                     </div>
                 </div>
                 <div className="no-print">
@@ -192,6 +211,29 @@ const Profile: React.FC<{ showToast: (message: string, type: 'success' | 'error'
                                 </button>
                             </div>
                         </form>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
+                        <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-200 mb-4 border-b border-slate-200 dark:border-slate-700 pb-3">Recent Activity</h3>
+                        {userActivity.length > 0 ? (
+                            <ul className="space-y-4 divide-y divide-slate-100 dark:divide-slate-700">
+                                {userActivity.map(log => (
+                                    <li key={log._id} className="pt-4 first:pt-0 flex flex-col space-y-1">
+                                        <div className="flex justify-between items-start">
+                                            <span className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                                                {log.action} {log.targetCollection ? `on ${log.targetCollection}` : ''}
+                                            </span>
+                                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                {new Date(log.timestamp).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        {log.changes && <span className="text-sm text-slate-600 dark:text-slate-400">{log.changes}</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">No recent activity found.</p>
+                        )}
                     </div>
                 </div>
 

@@ -22,7 +22,26 @@ export const seedSupabaseDatabase = async () => {
 
     // 2. Users
     console.log('Seeding users...');
+    const { supabaseAdminAuth } = await import('../src/lib/supabase.ts');
     for (const user of MOCK_USERS) {
+      let authId = null;
+      // Try to create auth user for seeding
+      const { data: authData, error: authError } = await supabaseAdminAuth.auth.signUp({
+          email: user.email,
+          password: 'password', // Default password for seeded users
+      });
+      
+      if (authError) {
+          if (authError.message.includes('already registered')) {
+              // For seeding, if they exist, we just skip linking here and let them link on login
+              console.log(`Auth user ${user.email} already exists, skipping auth creation.`);
+          } else {
+              console.error(`Error creating auth user for ${user.email}:`, authError);
+          }
+      } else if (authData.user) {
+          authId = authData.user.id;
+      }
+
       const userToUpsert = {
         _id: user._id,
         name: user.name,
@@ -32,6 +51,7 @@ export const seedSupabaseDatabase = async () => {
         phone: user.phone,
         whatsapp: user.whatsapp,
         address: user.address,
+        ...(authId ? { auth_id: authId } : {})
       };
       const { error } = await supabase.from('users').upsert(userToUpsert);
       if (error) throw error;

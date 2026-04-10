@@ -139,9 +139,9 @@ const Finance: React.FC<{
                                         {p.stockOrderId ? `Order #${p.stockOrderId.slice(-6)}` : p.reference || 'N/A'}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 no-print">
-                                        {p.proofImage ? (
+                                        {p.proofOfPayment ? (
                                             <Tooltip content="View Proof of Payment">
-                                                <button onClick={() => openProof(p.proofImage!)} className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded">
+                                                <button onClick={() => openProof(p.proofOfPayment!)} className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded">
                                                     <ImageIcon className="w-5 h-5"/>
                                                 </button>
                                             </Tooltip>

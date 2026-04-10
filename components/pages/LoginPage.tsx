@@ -7,7 +7,6 @@ import { seedSupabaseDatabase } from '../../utils/seedSupabase.ts';
 const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPassword: () => void }> = ({ onSwitchToRegister, onSwitchToForgotPassword }) => {
   const [email, setEmail] = useState('admin@system.com');
   const [password, setPassword] = useState('password');
-  const [role, setRole] = useState<string>('Admin');
   const [isSeeding, setIsSeeding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,7 +18,7 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
     setIsLoading(true);
     setError('');
     try {
-      const loggedInUser = await login(email, role, password);
+      const loggedInUser = await login(email, password);
       
       if (loggedInUser.role === 'Dealer' && loggedInUser.dealerId) {
           logAction(ActionType.Login, 'Dealers', loggedInUser.dealerId, `Dealer ${loggedInUser.name} logged in.`, loggedInUser);
@@ -49,10 +48,6 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
       alert("Error seeding database: " + (err.message || JSON.stringify(err)));
     }
   };
-
-  const demoRoles = [
-      'Admin', 'Super Admin', 'Dealer', 'Product Manager', 'Booking Manager', 'Stock Controller', 'Finance / Auditor', 'Logistics'
-  ];
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
@@ -95,15 +90,6 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
               />
             </div>
             <div>
-              <label htmlFor="role" className="text-sm font-medium text-slate-700 dark:text-slate-300">Login As (For Demo)</label>
-              <select
-                id="role" name="role" value={role} onChange={(e) => setRole(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-white dark:bg-slate-700 dark:text-slate-200"
-              >
-                {demoRoles.map(r => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-            <div>
               <button
                 type="submit"
                 disabled={isLoading}
@@ -114,7 +100,6 @@ const LoginPage: React.FC<{ onSwitchToRegister: () => void; onSwitchToForgotPass
             </div>
           </form>
           <div className="text-sm text-center text-slate-600 dark:text-slate-400 mt-6 space-y-4">
-              <p>For simulation purposes. No real authentication is performed.</p>
               <button onClick={onSwitchToRegister} className="font-medium text-primary hover:underline block w-full">
                   Register as a New Dealer
               </button>

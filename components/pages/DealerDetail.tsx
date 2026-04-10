@@ -350,7 +350,7 @@ const DealerDetail: React.FC<{ dealerId: string; setActivePage: (page: Page, sta
                                 { label: 'Amount', key: 'amount' },
                                 { label: 'Type', key: 'type' },
                                 { label: 'Reference', key: 'reference' },
-                                { label: 'Proof', key: 'proofImage' } // Not really sortable by image content but fits pattern
+                                { label: 'Proof', key: 'proofOfPayment' } // Not really sortable by image content but fits pattern
                             ]}
                             data={sortedPayments} 
                             renderRow={(payment) => (
@@ -360,9 +360,9 @@ const DealerDetail: React.FC<{ dealerId: string; setActivePage: (page: Page, sta
                                 <td className="px-6 py-4 whitespace-nowrap text-sm capitalize text-slate-600 dark:text-slate-300">{payment.type.replace('_', ' ')}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{payment.reference || '-'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 no-print">
-                                    {payment.proofImage ? (
+                                    {payment.proofOfPayment ? (
                                         <Tooltip content="View Proof">
-                                            <button onClick={() => openProof(payment.proofImage!)} className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 dark:hover:bg-slate-700 rounded">
+                                            <button onClick={() => openProof(payment.proofOfPayment!)} className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 dark:hover:bg-slate-700 rounded">
                                                 <ImageIcon className="w-5 h-5"/>
                                             </button>
                                         </Tooltip>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth.ts';
 import { useData } from '../../hooks/useData.ts';
+import { useAppContext } from '../../hooks/useAppContext.ts';
 
 // Add a simple email validation function
 const validateEmail = (email: string): boolean => {
@@ -12,6 +13,7 @@ const validateEmail = (email: string): boolean => {
 const DealerRegistrationPage: React.FC<{ onSwitchToLogin: () => void; }> = ({ onSwitchToLogin }) => {
     const { login } = useAuth();
     const { registerDealer } = useData();
+    const { addUser } = useAppContext();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -65,9 +67,19 @@ const DealerRegistrationPage: React.FC<{ onSwitchToLogin: () => void; }> = ({ on
             const { password, ...dealerData } = formData;
             const newDealer = await registerDealer(dealerData);
             
+            // Create the user account for the dealer
+            await addUser({
+                name: dealerData.ownerName,
+                email: dealerData.email,
+                role: 'Dealer',
+                dealerId: newDealer._id,
+                phone: dealerData.phone,
+                password: password,
+            });
+            
             // In a real app, you would securely create a user account.
             // Here, we simulate by logging them in immediately.
-            login(newDealer.email, 'Dealer');
+            await login(newDealer.email, password);
             // The main App component will now route them to the PendingApprovalPage
         } catch (err) {
             setErrors(prev => ({ ...prev, form: 'An error occurred during registration. Please try again.' }));

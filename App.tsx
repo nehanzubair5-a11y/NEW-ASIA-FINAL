@@ -12,7 +12,7 @@ import { useData } from './hooks/useData.ts';
 
 const App: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
-  const { dealers } = useData();
+  const { dealers, isLoading: isDataLoading } = useData();
   const [authView, setAuthView] = useState<'login' | 'register' | 'forgot-password' | 'reset-password'>('login');
   const [resetToken, setResetToken] = useState<string | null>(null);
 
@@ -36,6 +36,14 @@ const App: React.FC = () => {
       return <ResetPasswordPage token={resetToken} onSwitchToLogin={() => setAuthView('login')} />;
     }
     return <DealerRegistrationPage onSwitchToLogin={() => setAuthView('login')} />;
+  }
+
+  if (isDataLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   if (user?.role === 'Dealer') {

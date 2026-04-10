@@ -9,7 +9,7 @@ import { ALL_PERMISSIONS } from './permissions.ts';
 
 export const MOCK_ROLES: Role[] = [
   { _id: 'role-super', name: 'Super Admin', permissions: ALL_PERMISSIONS, isEditable: false },
-  { _id: 'role-admin', name: 'Admin', permissions: ALL_PERMISSIONS.filter(p => p !== 'system:manage_settings'), isEditable: true },
+  { _id: 'role-admin', name: 'Admin', permissions: ALL_PERMISSIONS, isEditable: true },
   { _id: 'role-dealer', name: 'Dealer', permissions: ['dealer_self:manage_bookings', 'dealer_self:create_order', 'dealer_self:confirm_receipt'], isEditable: false },
   { _id: 'role-pm', name: 'Product Manager', permissions: ['product:update_core', 'product:manage_variants'], isEditable: true },
   { _id: 'role-bm', name: 'Booking Manager', permissions: ['booking:create', 'booking:update'], isEditable: true },

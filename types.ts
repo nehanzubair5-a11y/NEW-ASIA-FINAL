@@ -18,14 +18,16 @@ export interface User {
     phone?: string;
     whatsapp?: string;
     address?: string;
+    avatarUrl?: string;
     resetToken?: string;
     resetTokenExpiry?: string;
+    authId?: string;
 }
 
 export interface AuthContextType {
     isAuthenticated: boolean;
     user: User | null;
-    login: (email: string, role: string, password?: string) => Promise<User>;
+    login: (email: string, password?: string) => Promise<User>;
     logout: () => void;
     updateCurrentUser: (updatedUser: User) => void;
 }
@@ -136,7 +138,6 @@ export interface Payment {
     amount: number;
     type: PaymentType;
     timestamp: string;
-    proofImage?: string;
 }
 
 export interface DealerPayment {
@@ -147,7 +148,6 @@ export interface DealerPayment {
     type: PaymentType;
     reference?: string;
     timestamp: string;
-    proofImage?: string;
     proofOfPayment?: string;
 }
 
@@ -291,6 +291,7 @@ export interface AppContextType {
     deleteUser: (userId: string) => Promise<void>;
     addRole: (roleData: Omit<Role, '_id'>) => Promise<Role>;
     updateRole: (updatedRole: Role) => Promise<void>;
+    deleteRole: (roleId: string) => Promise<void>;
 }
 
 

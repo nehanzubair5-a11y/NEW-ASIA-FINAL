@@ -1,7 +1,7 @@
 import { Dealer, Product, StockItem, StockOrder, Booking, StockStatus, User, OrderStatus, Role, DealerPayment, Announcement, AnnouncementRecipient, Conversation, Message } from '../types';
 import { supabase } from '../src/lib/supabase';
 
-const mapToCamelCase = (obj: any) => {
+export const mapToCamelCase = (obj: any) => {
   if (!obj) return obj;
   const mapping: Record<string, string> = {
     iseditable: 'isEditable',
@@ -40,6 +40,8 @@ const mapToCamelCase = (obj: any) => {
     ownername: 'ownerName',
     resettoken: 'resetToken',
     resettokenexpiry: 'resetTokenExpiry',
+    avatarurl: 'avatarUrl',
+    auth_id: 'authId',
   };
 
   const newObj: any = {};
@@ -54,7 +56,11 @@ const mapToSnakeCase = (obj: any) => {
   if (!obj) return obj;
   const newObj: any = {};
   for (const key in obj) {
-    newObj[key.toLowerCase()] = obj[key];
+    if (key === 'authId') {
+      newObj['auth_id'] = obj[key];
+    } else {
+      newObj[key.toLowerCase()] = obj[key];
+    }
   }
   return newObj;
 };
@@ -128,6 +134,11 @@ export const api = {
     if (error) throw error;
   },
 
+  deleteRole: async (roleId: string) => {
+    const { error } = await supabase.from('roles').delete().eq('_id', roleId);
+    if (error) throw error;
+  },
+
   // Custom endpoints
   getUserByEmail: async (email: string): Promise<User | null> => {
     const { data, error } = await supabase
@@ -143,75 +154,27 @@ export const api = {
   },
 
   requestPasswordReset: async (email: string): Promise<boolean> => {
-    const user = await api.getUserByEmail(email);
-    if (!user) return false; // Don't reveal if user exists
-
-    // Secure token generation using Web Crypto API
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    const rawToken = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-    
-    // Hash the token for storage
-    const encoder = new TextEncoder();
-    const data = encoder.encode(rawToken);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashedToken = Array.from(new Uint8Array(hashBuffer), byte => byte.toString(16).padStart(2, '0')).join('');
-
-    const resetTokenExpiry = new Date(Date.now() + 3600000).toISOString(); // 1 hour from now
-
-    const { error } = await supabase
-      .from('users')
-      .update({ resettoken: hashedToken, resettokenexpiry: resetTokenExpiry })
-      .eq('_id', user._id);
-
-    if (error) throw error;
-
-    // Simulate sending email with RAW token
-    const resetUrl = `${window.location.origin}?token=${rawToken}`;
-    console.log(`[SIMULATED EMAIL] Password reset requested for ${email}.`);
-    console.log(`[SIMULATED EMAIL] Click here to reset: ${resetUrl}`);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      console.error("Password reset error:", error);
+      return false;
+    }
     return true;
   },
 
   resetPassword: async (token: string, newPassword: string): Promise<boolean> => {
-    // Hash the provided token to compare with database
-    const encoder = new TextEncoder();
-    const tokenData = encoder.encode(token);
-    const tokenHashBuffer = await crypto.subtle.digest('SHA-256', tokenData);
-    const hashedToken = Array.from(new Uint8Array(tokenHashBuffer), byte => byte.toString(16).padStart(2, '0')).join('');
-
-    // Find user with this hashed token
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('resettoken', hashedToken)
-      .single();
-
-    if (error || !data) return false;
-
-    const user = mapToCamelCase(data) as User;
-
-    // Check expiry
-    if (user.resetTokenExpiry && new Date(user.resetTokenExpiry) < new Date()) {
-      return false; // Token expired
+    // With Supabase Auth, the token is handled in the URL hash and automatically sets the session.
+    // If the user is on the reset password page, they should already have an active session from the link.
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    if (error) {
+      console.error("Failed to update password:", error);
+      return false;
     }
-
-    // Hash the new password
-    const pwData = encoder.encode(newPassword);
-    const pwHashBuffer = await crypto.subtle.digest('SHA-256', pwData);
-    const hashedPassword = Array.from(new Uint8Array(pwHashBuffer), byte => byte.toString(16).padStart(2, '0')).join('');
-
-    // Update password and clear token
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({ 
-        password: hashedPassword,
-        resettoken: null, 
-        resettokenexpiry: null 
-      })
-      .eq('_id', user._id);
-
-    if (updateError) throw updateError;
     return true;
   },
 

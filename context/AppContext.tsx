@@ -71,15 +71,51 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [user, setAuditLogs]);
 
     const addUser = async (userData: Omit<User, '_id'>): Promise<User> => {
-        const newUser: User = { ...userData, _id: `user-${Date.now()}` };
-        setUsers(prev => [...prev, newUser]);
-        logAction(ActionType.Create, 'Users', newUser._id, `Created new user ${newUser.name} with role ${newUser.role}.`);
-        return newUser;
+        let authId = null;
+        if (userData.password) {
+            // Use secondary client to create user without changing current session
+            const { supabaseAdminAuth } = await import('../src/lib/supabase.ts');
+            const { data, error } = await supabaseAdminAuth.auth.signUp({
+                email: userData.email,
+                password: userData.password,
+            });
+            if (error) {
+                console.error("Failed to create auth user:", error);
+                if (error.message.includes('Invalid API key')) {
+                    throw new Error('Your Supabase API key is invalid. Please check your VITE_SUPABASE_ANON_KEY environment variable.');
+                }
+                throw error;
+            }
+            if (data.user) {
+                authId = data.user.id;
+            }
+        }
+
+        const userToSave = { ...userData, authId: authId || undefined } as any;
+        const savedUser = await api.saveUser(userToSave);
+        setUsers(prev => [...prev, savedUser]);
+        logAction(ActionType.Create, 'Users', savedUser._id, `Created new user ${savedUser.name} with role ${savedUser.role}.`);
+        return savedUser;
     };
 
     const updateUser = async (updatedUser: User) => {
-        setUsers(prev => prev.map(u => u._id === updatedUser._id ? updatedUser : u));
-        logAction(ActionType.Update, 'Users', updatedUser._id, `Updated profile for ${updatedUser.name}.`);
+        if (updatedUser.password) {
+            // If they are updating their own password, we can use the primary client
+            if (user && user._id === updatedUser._id) {
+                const { supabase } = await import('../src/lib/supabase.ts');
+                const { error } = await supabase.auth.updateUser({ password: updatedUser.password });
+                if (error) {
+                    console.error("Failed to update auth password:", error);
+                    throw error;
+                }
+            } else {
+                // We can't easily update other users' passwords from the client without admin privileges
+                console.warn("Cannot update another user's password from the client.");
+            }
+        }
+        const savedUser = await api.saveUser(updatedUser);
+        setUsers(prev => prev.map(u => u._id === savedUser._id ? savedUser : u));
+        logAction(ActionType.Update, 'Users', savedUser._id, `Updated profile for ${savedUser.name}.`);
     };
 
     const deleteUser = async (userId: string) => {
@@ -91,24 +127,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
      const addRole = async (roleData: Omit<Role, '_id'>): Promise<Role> => {
-        const newRole: Role = { ...roleData, _id: `role-${Date.now()}` };
-        setRoles(prev => [...prev, newRole]);
-        logAction(ActionType.Create, 'Roles', newRole._id, `Created new role '${newRole.name}' with ${newRole.permissions.length} permissions.`);
-        return newRole;
+        const savedRole = await api.saveRole(roleData as Role);
+        setRoles(prev => [...prev, savedRole]);
+        logAction(ActionType.Create, 'Roles', savedRole._id, `Created new role '${savedRole.name}' with ${savedRole.permissions.length} permissions.`);
+        return savedRole;
     };
 
     const updateRole = async (updatedRole: Role) => {
-        const originalRole = roles.find(r => r._id === updatedRole._id);
-        let changesDescription = `Updated role '${updatedRole.name}'.`;
+        const savedRole = await api.saveRole(updatedRole);
+        const originalRole = roles.find(r => r._id === savedRole._id);
+        let changesDescription = `Updated role '${savedRole.name}'.`;
 
         if (originalRole) {
             const changes = [];
-            if (originalRole.name !== updatedRole.name) {
-                changes.push(`Name changed from '${originalRole.name}' to '${updatedRole.name}'.`);
+            if (originalRole.name !== savedRole.name) {
+                changes.push(`Name changed from '${originalRole.name}' to '${savedRole.name}'.`);
             }
 
             const originalPerms = new Set(originalRole.permissions);
-            const updatedPerms = new Set(updatedRole.permissions);
+            const updatedPerms = new Set(savedRole.permissions);
             const added = [...updatedPerms].filter(p => !originalPerms.has(p));
             const removed = [...originalPerms].filter(p => !updatedPerms.has(p));
 
@@ -124,8 +161,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             }
         }
 
-        setRoles(prev => prev.map(r => r._id === updatedRole._id ? updatedRole : r));
-        logAction(ActionType.Update, 'Roles', updatedRole._id, changesDescription);
+        setRoles(prev => prev.map(r => r._id === savedRole._id ? savedRole : r));
+        logAction(ActionType.Update, 'Roles', savedRole._id, changesDescription);
+    };
+
+    const deleteRole = async (roleId: string) => {
+        const roleToDelete = roles.find(r => r._id === roleId);
+        if (!roleToDelete) return;
+        await api.deleteRole(roleId);
+        setRoles(prev => prev.filter(r => r._id !== roleId));
+        logAction(ActionType.Delete, 'Roles', roleId, `Deleted role '${roleToDelete.name}' which had ${roleToDelete.permissions.length} permissions.`);
     };
 
     const updateSettings = (newSettings: Partial<Settings>) => {
@@ -218,7 +263,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         markNotificationAsRead, removeDeviceSession,
         setIsOnline, processQueue, addToQueue, toggleAutoApproval,
         backupState, restoreState, updateSettings, logAction, addUser, updateUser, deleteUser,
-        addRole, updateRole,
+        addRole, updateRole, deleteRole,
     };
     
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
