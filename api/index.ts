@@ -114,6 +114,7 @@ export const api = {
   fetchAnnouncementRecipients: createFetchFunction<AnnouncementRecipient>('announcement_recipients'),
   fetchConversations: createFetchFunction<Conversation>('conversations'),
   fetchMessages: createFetchFunction<Message>('messages'),
+  fetchAuditLogs: createFetchFunction<any>('audit_logs'),
 
   // Mutation Functions
   saveUser: createSaveFunction<User>('users'),
@@ -128,6 +129,7 @@ export const api = {
   saveAnnouncementRecipient: createSaveFunction<AnnouncementRecipient>('announcement_recipients'),
   saveConversation: createSaveFunction<Conversation>('conversations'),
   saveMessage: createSaveFunction<Message>('messages'),
+  saveAuditLog: createSaveFunction<any>('audit_logs'),
 
   deleteUser: async (userId: string) => {
     const { error } = await supabase.from('users').delete().eq('_id', userId);

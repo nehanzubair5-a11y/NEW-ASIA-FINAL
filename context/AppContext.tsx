@@ -38,9 +38,9 @@ export const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { user } = useAuth();
-    const [users, setUsers] = useStickyState<User[]>(MOCK_USERS, 'dms-users');
-    const [roles, setRoles] = useStickyState<Role[]>([], 'dms-roles');
-    const [auditLogs, setAuditLogs] = useStickyState<AuditLog[]>(MOCK_AUDIT_LOGS, 'dms-auditLogs');
+    const [users, setUsers] = useState<User[]>([]);
+    const [roles, setRoles] = useState<Role[]>([]);
+    const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
     const [notifications, setNotifications] = useStickyState<Notification[]>(MOCK_NOTIFICATIONS, 'dms-notifications');
     const [deviceSessions, setDeviceSessions] = useStickyState<DeviceSession[]>(MOCK_DEVICE_SESSIONS, 'dms-deviceSessions');
     const [backupHistory, setBackupHistory] = useStickyState<BackupRecord[]>([], 'dms-backupHistory');
@@ -51,8 +51,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [settings, setSettings] = useStickyState<Settings>(initialSettings, 'dms-settings');
 
     useEffect(() => {
-        api.fetchRoles().then(fetchedRoles => setRoles(fetchedRoles as Role[]));
-    }, []);
+        if (user) {
+            Promise.all([
+                api.fetchRoles(),
+                api.fetchUsers(),
+                api.fetchAuditLogs()
+            ]).then(([fetchedRoles, fetchedUsers, fetchedLogs]) => {
+                setRoles(fetchedRoles as Role[]);
+                setUsers(fetchedUsers as User[]);
+                setAuditLogs(fetchedLogs as AuditLog[]);
+            }).catch(console.error);
+        }
+    }, [user]);
 
     const logAction = useCallback((action: ActionType, targetCollection?: string, targetId?: string, changes?: string, actor?: User) => {
         const actingUser = actor || user;
@@ -67,6 +77,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             changes,
             timestamp: new Date().toISOString()
         };
+        // Save to DB asynchronously
+        api.saveAuditLog(newLog).catch(console.error);
         setAuditLogs(prev => [newLog, ...prev]);
     }, [user, setAuditLogs]);
 

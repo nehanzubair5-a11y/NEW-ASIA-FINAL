@@ -136,7 +136,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, show
         onDrop,
         accept: { 'text/csv': ['.csv'] },
         maxFiles: 1
-    });
+    } as any);
 
     const handleImport = async () => {
         setImportStatus('importing');

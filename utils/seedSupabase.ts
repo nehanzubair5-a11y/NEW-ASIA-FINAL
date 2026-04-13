@@ -23,23 +23,33 @@ export const seedSupabaseDatabase = async () => {
     // 2. Users
     console.log('Seeding users...');
     const { supabaseAdminAuth } = await import('../src/lib/supabase.ts');
+    
+    // Get the currently logged in user so we can link their auth_id
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentUser = session?.user;
+
     for (const user of MOCK_USERS) {
       let authId = null;
-      // Try to create auth user for seeding
-      const { data: authData, error: authError } = await supabaseAdminAuth.auth.signUp({
-          email: user.email,
-          password: 'password', // Default password for seeded users
-      });
       
-      if (authError) {
-          if (authError.message.includes('already registered')) {
-              // For seeding, if they exist, we just skip linking here and let them link on login
-              console.log(`Auth user ${user.email} already exists, skipping auth creation.`);
-          } else {
-              console.error(`Error creating auth user for ${user.email}:`, authError);
+      if (currentUser && currentUser.email === user.email) {
+          authId = currentUser.id;
+      } else {
+          // Try to create auth user for seeding
+          const { data: authData, error: authError } = await supabaseAdminAuth.auth.signUp({
+              email: user.email,
+              password: 'password', // Default password for seeded users
+          });
+          
+          if (authError) {
+              if (authError.message.includes('already registered')) {
+                  // For seeding, if they exist, we just skip linking here and let them link on login
+                  console.log(`Auth user ${user.email} already exists, skipping auth creation.`);
+              } else {
+                  console.error(`Error creating auth user for ${user.email}:`, authError);
+              }
+          } else if (authData.user) {
+              authId = authData.user.id;
           }
-      } else if (authData.user) {
-          authId = authData.user.id;
       }
 
       const userToUpsert = {
