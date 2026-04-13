@@ -76,27 +76,38 @@ const createFetchFunction = <T>(table: string) => {
 const createSaveFunction = <T extends { _id?: string }>(table: string) => {
   return async (item: T): Promise<T> => {
     const itemToSave = mapToSnakeCase(item);
-    if (item._id) {
-      // Update
-      const { data, error } = await supabase
+    
+    if (!itemToSave._id) {
+      itemToSave._id = `${table}-${Date.now()}`;
+    }
+
+    // Try to insert first
+    let { data, error } = await supabase
+      .from(table)
+      .insert(itemToSave)
+      .select();
+
+    // If it fails due to a unique constraint violation (conflict), it means the row already exists, so we update
+    if (error && error.code === '23505') {
+      const { data: updateData, error: updateError } = await supabase
         .from(table)
         .update(itemToSave)
-        .eq('_id', item._id)
-        .select()
-        .single();
-      if (error) throw error;
-      return mapToCamelCase(data) as T;
-    } else {
-      // Insert
-      const newItem = { ...itemToSave, _id: `${table}-${Date.now()}` };
-      const { data, error } = await supabase
-        .from(table)
-        .insert(newItem)
-        .select()
-        .single();
-      if (error) throw error;
-      return mapToCamelCase(data) as T;
+        .eq('_id', itemToSave._id)
+        .select();
+        
+      data = updateData;
+      error = updateError;
     }
+
+    if (error) throw error;
+
+    // If RLS blocks the SELECT (e.g., anonymous user registering a dealer), data will be empty.
+    // In that case, we just return the original item we tried to save.
+    if (data && data.length > 0) {
+      return mapToCamelCase(data[0]) as T;
+    }
+
+    return item;
   };
 };
 

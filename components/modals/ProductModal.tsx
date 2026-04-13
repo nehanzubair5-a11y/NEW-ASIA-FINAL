@@ -49,6 +49,9 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
         return skus;
     }, [allProducts, product]);
 
+    const hasValidationErrors = useMemo(() => {
+        return variantGroups.some(g => g.colors.some(c => !!c.error));
+    }, [variantGroups]);
 
     useEffect(() => {
         if (isOpen) {
@@ -155,10 +158,6 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
         newGroups[groupIndex].colors = newGroups[groupIndex].colors.filter((_, i) => i !== colorIndex);
         setVariantGroups(newGroups);
     };
-
-    const hasValidationErrors = useMemo(() => {
-        return variantGroups.some(g => g.colors.some(c => !!c.error));
-    }, [variantGroups]);
 
 
     const handleSubmit = async (e: React.FormEvent) => {

@@ -2,16 +2,22 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../test-utils.tsx'; // Our custom render
 import App from '../../App.tsx';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../../hooks/useAuth.ts', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { _id: '1', name: 'Admin', role: 'Super Admin', email: 'admin@system.com' },
+    login: vi.fn(),
+    logout: vi.fn(),
+  })
+}));
 
 describe('Dealer Management Flow', () => {
   it('allows an Admin to add a new dealer', async () => {
     const user = userEvent.setup();
     render(<App />);
 
-    // 1. Log in as Admin
-    await user.selectOptions(screen.getByLabelText(/login as/i), 'Admin');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
     await screen.findByRole('heading', { name: /dashboard overview/i });
 
     // 2. Navigate to Dealers page

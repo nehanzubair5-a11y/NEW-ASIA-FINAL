@@ -1,7 +1,7 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthContextType } from '../types.ts';
 import { api, mapToCamelCase } from '../api/index.ts';
-import { supabase, supabaseAdminAuth, isSupabaseConfigured } from '../src/lib/supabase.ts';
+import { supabase, supabaseAdminAuth } from '../src/lib/supabase.ts';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -55,10 +55,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const login = async (email: string, password?: string): Promise<User> => {
         try {
-            if (!isSupabaseConfigured) {
-                throw new Error('Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.');
-            }
-
             if (!password) {
                 throw new Error('Password is required for login');
             }
