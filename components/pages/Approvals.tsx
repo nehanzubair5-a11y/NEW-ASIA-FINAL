@@ -6,6 +6,8 @@ import Tooltip from '../shared/Tooltip.tsx';
 import { ClockIcon, CheckCircleIcon, XCircleIcon, PrintIcon } from '../icons/Icons.tsx';
 import { useData } from '../../hooks/useData.ts';
 import { printElementById } from '../../utils/print.ts';
+import usePagination from '../../hooks/usePagination.ts';
+import Pagination from '../shared/Pagination.tsx';
 
 type PriorityMethod = 'reputation' | 'fcfs';
 
@@ -29,6 +31,8 @@ const Approvals: React.FC<{ showToast: (message: string, type: 'success' | 'erro
         });
 
     }, [stockOrders, priorityMethod, dealers]);
+
+    const { paginatedData, currentPage, totalPages, nextPage, prevPage } = usePagination(pendingRequests, 10);
 
     const handleReview = (request: StockOrder) => {
         setSelectedRequest(request);
@@ -89,7 +93,7 @@ const Approvals: React.FC<{ showToast: (message: string, type: 'success' | 'erro
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-200">
-                            {pendingRequests.length > 0 ? pendingRequests.map(request => {
+                            {paginatedData.length > 0 ? paginatedData.map(request => {
                                 const dealer = dealers.find(d => d._id === request.dealerId);
                                 const totalItems = request.items.length;
                                 const totalQty = request.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -117,6 +121,7 @@ const Approvals: React.FC<{ showToast: (message: string, type: 'success' | 'erro
                         </tbody>
                     </table>
                 </div>
+                <Pagination currentPage={currentPage} totalPages={totalPages} onNext={nextPage} onPrev={prevPage} />
             </div>
 
             <OrderReviewModal

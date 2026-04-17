@@ -242,9 +242,47 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
                                     <label htmlFor="mileage" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Mileage Spec</label>
                                     <input type="text" name="mileage" id="mileage" value={specifications.mileage} onChange={e => setSpecifications(s => ({...s, mileage: e.target.value}))} disabled={!canUpdateCore} className="mt-1 block w-full shadow-sm sm:text-sm border-slate-300 dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-700/50" />
                                 </div>
-                                <div className="md:col-span-2">
-                                    <label htmlFor="imageUrl" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Image URL</label>
-                                    <input type="url" name="imageUrl" id="imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} disabled={!canUpdateCore} placeholder="https://example.com/image.jpg" className="mt-1 block w-full shadow-sm sm:text-sm border-slate-300 dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-700/50" />
+                                <div className="md:col-span-2 space-y-2">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Product Image</label>
+                                    <div className="flex items-center space-x-4">
+                                        {imageUrl && (
+                                            <img
+                                                src={imageUrl}
+                                                alt="Preview"
+                                                className="h-16 w-16 object-cover rounded shadow-sm border border-slate-200 dark:border-slate-700"
+                                                referrerPolicy="no-referrer"
+                                            />
+                                        )}
+                                        <div className="flex-1">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                disabled={!canUpdateCore}
+                                                onChange={e => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        if (file.size > 2 * 1024 * 1024) {
+                                                            showToast("Image size must be less than 2MB", "error");
+                                                            return;
+                                                        }
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => {
+                                                            setImageUrl(reader.result as string);
+                                                        };
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                }}
+                                                className="block w-full text-sm text-slate-500
+                                                    file:mr-4 file:py-2 file:px-4
+                                                    file:rounded-md file:border-0
+                                                    file:text-sm file:font-medium
+                                                    file:bg-primary file:text-white
+                                                    hover:file:bg-secondary
+                                                    disabled:opacity-50 disabled:cursor-not-allowed"
+                                            />
+                                            <p className="mt-1 text-xs text-slate-500">Suggested size: 500x500px, Max 2MB.</p>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div className="flex items-center mt-6">
                                     <input

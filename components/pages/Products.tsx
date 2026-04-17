@@ -7,6 +7,8 @@ import { useData } from '../../hooks/useData.ts';
 import Tooltip from '../shared/Tooltip.tsx';
 import SkeletonLoader from '../shared/SkeletonLoader.tsx';
 import EmptyState from '../shared/EmptyState.tsx';
+import usePagination from '../../hooks/usePagination.ts';
+import Pagination from '../shared/Pagination.tsx';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { printElementById, exportToCsv } from '../../utils/print.ts';
 
@@ -76,6 +78,8 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
         }
         return sortableItems;
     }, [filteredProducts, sortConfig]);
+
+    const { paginatedData, currentPage, totalPages, nextPage, prevPage, setCurrentPage } = usePagination(sortedProducts, 10);
 
     useEffect(() => {
         if (searchQuery) {
@@ -231,7 +235,7 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
                             type="text" 
                             placeholder="Search model, variant, SKU..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                             className="pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary focus:border-primary w-full"
                         />
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -245,7 +249,7 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
                         <select
                             id="brand-filter"
                             value={brandFilter}
-                            onChange={(e) => { setBrandFilter(e.target.value); }}
+                            onChange={(e) => { setBrandFilter(e.target.value); setCurrentPage(1); }}
                             className="w-full md:w-auto p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm bg-white dark:bg-slate-800"
                         >
                             <option value="all">All Brands</option>
@@ -296,7 +300,7 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-200">
-                            {sortedProducts.length > 0 ? sortedProducts.map(product => (
+                            {paginatedData.length > 0 ? paginatedData.map(product => (
                                 <React.Fragment key={product._id}>
                                     <tr className="hover:bg-slate-50 transition-colors">
                                         <td className="px-2 py-4 whitespace-nowrap text-center no-print">
@@ -436,6 +440,7 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
                         </tbody>
                     </table>
                 </div>
+                <Pagination currentPage={currentPage} totalPages={totalPages} onNext={nextPage} onPrev={prevPage} />
             </div>
             <ProductModal 
                 isOpen={isModalOpen} 
