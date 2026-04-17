@@ -4,6 +4,7 @@ import type { StockOrder, ApprovedOrderItem, StockOrderItem, Recommendation } fr
 // FIX: Use OrderStatus enum instead of the deprecated AllocationStatus.
 import { OrderStatus } from '../../types.ts';
 import { useData } from '../../hooks/useData.ts';
+import { useAppContext } from '../../hooks/useAppContext.ts';
 import { AlertTriangleIcon, FileTextIcon } from '../icons/Icons.tsx';
 import Spinner from '../shared/Spinner.tsx';
 // FIX: Standard default import
@@ -19,6 +20,7 @@ interface OrderReviewModalProps {
 
 const OrderReviewModal: React.FC<OrderReviewModalProps> = ({ isOpen, onClose, order: request, showToast }) => {
     const { dealers, products, stock, processAllocationRequest, getRecommendationForItem, dealerPayments } = useData();
+    const { settings } = useAppContext();
     const [approvedQuantities, setApprovedQuantities] = useState<Record<string, number>>({});
     const [isVisible, setIsVisible] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -65,24 +67,30 @@ const OrderReviewModal: React.FC<OrderReviewModalProps> = ({ isOpen, onClose, or
     }, [request, isOpen, getRecommendedQty]);
 
     const financialSummary = useMemo(() => {
-        if (!request) return { orderValue: 0, totalPaid: 0, balance: 0 };
+        if (!request) return { orderValue: 0, totalPaid: 0, balance: 0, subTotal: 0, taxAmount: 0 };
 
-        const orderValue = request.items.reduce((sum, item) => {
+        const subTotal = request.items.reduce((sum, item) => {
             const variant = products.flatMap(p => p.variants).find(v => v._id === item.variantId);
             const approvedQty = approvedQuantities[item.variantId] || 0;
             return sum + (approvedQty * (variant?.price || 0));
         }, 0);
+
+        const taxRate = settings.taxRate || 0;
+        const taxAmount = (subTotal * taxRate) / 100;
+        const orderValue = subTotal + taxAmount;
 
         const totalPaid = dealerPayments
             .filter(p => p.stockOrderId === request._id)
             .reduce((sum, p) => sum + p.amount, 0);
 
         return {
+            subTotal,
+            taxAmount,
             orderValue,
             totalPaid,
             balance: orderValue - totalPaid,
         };
-    }, [request, approvedQuantities, dealerPayments, products]);
+    }, [request, approvedQuantities, dealerPayments, products, settings.taxRate]);
 
 
     const RecommendationChip: React.FC<{ rec: Recommendation }> = ({ rec }) => {
@@ -224,19 +232,38 @@ const OrderReviewModal: React.FC<OrderReviewModalProps> = ({ isOpen, onClose, or
                                     </div>
                                 </div>
                             )}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                            <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 text-sm">
                                 <div>
-                                    <p className="text-slate-500 dark:text-slate-400">Calculated Order Value</p>
+                                    <p className="text-slate-500 dark:text-slate-400">Subtotal</p>
+                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-lg">Rs. {financialSummary.subTotal.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 dark:text-slate-400">Tax ({settings.taxRate || 0}%)</p>
+                                    <p className="font-bold text-slate-800 dark:text-slate-100 text-lg">Rs. {financialSummary.taxAmount.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 dark:text-slate-400">Total Value</p>
                                     <p className="font-bold text-slate-800 dark:text-slate-100 text-lg">Rs. {financialSummary.orderValue.toLocaleString()}</p>
                                 </div>
                                  <div>
-                                    <p className="text-slate-500 dark:text-slate-400">Payments Received</p>
+                                    <p className="text-slate-500 dark:text-slate-400">Payments</p>
                                     <p className="font-bold text-green-600 text-lg">Rs. {financialSummary.totalPaid.toLocaleString()}</p>
                                 </div>
                                 <div>
-                                    <p className="text-slate-500 dark:text-slate-400">Outstanding Balance</p>
+                                    <p className="text-slate-500 dark:text-slate-400">Balance</p>
                                     <p className={`font-bold text-lg ${financialSummary.balance > 0 ? 'text-red-600' : 'text-slate-800 dark:text-slate-100'}`}>
                                         Rs. {financialSummary.balance.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-slate-500 dark:text-slate-400">Proof</p>
+                                    {request.proofOfPaymentUrl ? (
+                                        <a href={request.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium flex items-center space-x-1 mt-1">
+                                            <FileTextIcon className="w-4 h-4" />
+                                            <span>Receipt</span>
+                                        </a>
+                                    ) : (
+                                        <p className="text-slate-500 dark:text-slate-400 italic mt-1">None</p>
+                                    )}
                                 </div>
                             </div>
                         </div>

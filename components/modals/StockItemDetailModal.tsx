@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { StockItem, StockStatus, BookingStatus } from '../../types.ts';
 import { useData } from '../../hooks/useData.ts';
-import { ClockIcon, MotorcycleIcon, ArchiveIcon, UsersIcon, CalendarIcon, CheckCircleIcon, DollarSignIcon } from '../icons/Icons.tsx';
+import { ClockIcon, MotorcycleIcon, ArchiveIcon, UsersIcon, CalendarIcon, CheckCircleIcon, DollarSignIcon, EditIcon, SaveIcon, XIcon } from '../icons/Icons.tsx';
 
 interface StockItemDetailModalProps {
     isOpen: boolean;
@@ -19,7 +19,30 @@ const getStatusInfo = (status: StockStatus): { color: string; text: string } => 
 };
 
 const StockItemDetailModal: React.FC<StockItemDetailModalProps> = ({ isOpen, onClose, item }) => {
-    const { products, bookings, dealers } = useData();
+    const { products, bookings, dealers, updateStockItem } = useData();
+    const [isEditing, setIsEditing] = useState(false);
+    const [editStatus, setEditStatus] = useState<StockStatus>(StockStatus.Available);
+    const [editAssignedAt, setEditAssignedAt] = useState('');
+    const [editDealerId, setEditDealerId] = useState<string>('');
+
+    useEffect(() => {
+        if (item) {
+            setEditStatus(item.status);
+            setEditAssignedAt(item.assignedAt.split('T')[0]);
+            setEditDealerId(item.dealerId || '');
+        }
+    }, [item]);
+
+    const handleSave = async () => {
+        if (!item) return;
+        await updateStockItem(item._id, {
+            status: editStatus,
+            assignedAt: new Date(editAssignedAt).toISOString(),
+            dealerId: editDealerId === '' ? null : editDealerId
+        });
+        setIsEditing(false);
+        onClose();
+    };
 
     const findProductInfo = (variantId: string) => {
         for (const product of products) {
@@ -86,25 +109,75 @@ const StockItemDetailModal: React.FC<StockItemDetailModalProps> = ({ isOpen, onC
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" onClick={onClose}>
             <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl" onClick={e => e.stopPropagation()}>
-                <div className="p-6 border-b flex items-start space-x-4">
-                     <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
-                        <MotorcycleIcon className="w-6 h-6" />
+                <div className="p-6 border-b flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
+                            <MotorcycleIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-semibold text-gray-800">{product?.brand} {product?.modelName}</h3>
+                            <p className="text-sm text-gray-500">{variant?.name}</p>
+                            <p className="text-xs font-mono text-gray-400 mt-1">VIN: {item.vin}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-xl font-semibold text-gray-800">{product?.brand} {product?.modelName}</h3>
-                        <p className="text-sm text-gray-500">{variant?.name}</p>
-                        <p className="text-xs font-mono text-gray-400 mt-1">VIN: {item.vin}</p>
-                    </div>
+                    {!isEditing && (
+                        <button onClick={() => setIsEditing(true)} className="text-gray-500 hover:text-primary transition-colors">
+                            <EditIcon className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
                 <div className="p-6 space-y-6 bg-slate-50/50">
                     <div>
                         <h4 className="text-sm font-medium text-gray-500 mb-2">Current Status</h4>
-                        <div className="bg-white p-4 rounded-lg border">
-                            <span className={`px-3 py-1 inline-flex text-sm leading-5 font-bold rounded-full ${statusInfo.color}`}>
-                                {item.status}
-                            </span>
-                             <p className="text-sm text-gray-600 mt-2">{statusInfo.text}</p>
-                        </div>
+                        {isEditing ? (
+                            <div className="bg-white p-4 rounded-lg border space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select
+                                        value={editStatus}
+                                        onChange={(e) => setEditStatus(e.target.value as StockStatus)}
+                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                    >
+                                        {Object.values(StockStatus).map(status => (
+                                            <option key={status} value={status}>{status}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Date</label>
+                                    <input
+                                        type="date"
+                                        value={editAssignedAt}
+                                        onChange={(e) => setEditAssignedAt(e.target.value)}
+                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                                    <select
+                                        value={editDealerId}
+                                        onChange={(e) => setEditDealerId(e.target.value)}
+                                        className="w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
+                                    >
+                                        <option value="">Central Stock</option>
+                                        {dealers.map(dealer => (
+                                            <option key={dealer._id} value={dealer._id}>{dealer.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="flex justify-end space-x-2 mt-4">
+                                    <button onClick={() => setIsEditing(false)} className="px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                                    <button onClick={handleSave} className="px-3 py-1.5 bg-primary text-white rounded-md text-sm hover:bg-secondary">Save Changes</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-white p-4 rounded-lg border">
+                                <span className={`px-3 py-1 inline-flex text-sm leading-5 font-bold rounded-full ${statusInfo.color}`}>
+                                    {item.status}
+                                </span>
+                                <p className="text-sm text-gray-600 mt-2">{statusInfo.text}</p>
+                            </div>
+                        )}
                     </div>
                     <div>
                         <h4 className="text-sm font-medium text-gray-500 mb-2">Financials</h4>

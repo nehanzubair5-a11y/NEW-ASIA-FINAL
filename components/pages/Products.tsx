@@ -224,15 +224,15 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex items-center justify-between gap-4 no-print">
-                <div className="flex items-center gap-4 flex-wrap">
-                     <div className="relative">
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 no-print">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full">
+                     <div className="relative w-full md:w-64">
                         <input 
                             type="text" 
                             placeholder="Search model, variant, SKU..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary focus:border-primary"
+                            className="pl-10 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm focus:ring-primary focus:border-primary w-full"
                         />
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg className="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -240,13 +240,13 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
                             </svg>
                         </div>
                     </div>
-                     <div className="flex items-center">
-                        <label htmlFor="brand-filter" className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2 shrink-0">Brand:</label>
+                     <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                        <label htmlFor="brand-filter" className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">Brand:</label>
                         <select
                             id="brand-filter"
                             value={brandFilter}
                             onChange={(e) => { setBrandFilter(e.target.value); }}
-                            className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm bg-white dark:bg-slate-800"
+                            className="w-full md:w-auto p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm bg-white dark:bg-slate-800"
                         >
                             <option value="all">All Brands</option>
                             {uniqueBrands.map(brand => <option key={brand} value={brand}>{brand}</option>)}
@@ -312,11 +312,25 @@ const Products: React.FC<{ showToast: (message: string, type: 'success' | 'error
                                             <span className={product.brand === 'Ramza' ? 'text-teal-600' : 'text-slate-900'}>{product.brand}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-slate-900">{product.modelName}</div>
-                                            <div className="text-sm text-slate-500">
-                                                {product.variants.length > 1 ? 'From ' : ''}
-                                                <span className="font-semibold">{product.variants[0]?.price.toLocaleString() ?? 'N/A'}</span>
-                                                <span className="text-xs ml-1">PKR</span>
+                                            <div className="flex items-center gap-3">
+                                                {product.imageUrl && (
+                                                    <img src={product.imageUrl} alt={product.modelName} className="w-10 h-10 object-cover rounded-md border border-slate-200 dark:border-slate-700" referrerPolicy="no-referrer" />
+                                                )}
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="text-sm font-medium text-slate-900">{product.modelName}</div>
+                                                        {product.isActive === false && (
+                                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                                                                Archived
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-slate-500">
+                                                        {product.variants.length > 1 ? 'From ' : ''}
+                                                        <span className="font-semibold">{product.variants[0]?.price.toLocaleString() ?? 'N/A'}</span>
+                                                        <span className="text-xs ml-1">PKR</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center no-print">

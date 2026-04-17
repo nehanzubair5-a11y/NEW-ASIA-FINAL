@@ -2,6 +2,7 @@ import React from 'react';
 import type { StockOrder } from '../../types.ts';
 import { PrintIcon } from '../icons/Icons.tsx';
 import { useData } from '../../hooks/useData.ts';
+import { useAppContext } from '../../hooks/useAppContext.ts';
 import { printElementById } from '../../utils/print.ts';
 
 interface StockOrderInvoiceModalProps {
@@ -13,6 +14,7 @@ interface StockOrderInvoiceModalProps {
 
 const StockOrderInvoiceModal: React.FC<StockOrderInvoiceModalProps> = ({ isOpen, onClose, order, approvedQuantities }) => {
     const { products, dealers, dealerPayments } = useData();
+    const { settings } = useAppContext();
 
     const handlePrint = () => {
         printElementById('printable-stock-invoice');
@@ -39,10 +41,14 @@ const StockOrderInvoiceModal: React.FC<StockOrderInvoiceModalProps> = ({ isOpen,
         }))
         .filter(item => item.approvedQuantity > 0);
 
-    const totalValue = approvedItems.reduce((sum, item) => {
+    const subTotal = approvedItems.reduce((sum, item) => {
         const { variant } = findProductInfo(item.variantId);
         return sum + (item.approvedQuantity * (variant?.price || 0));
     }, 0);
+
+    const taxRate = settings.taxRate || 0;
+    const taxAmount = (subTotal * taxRate) / 100;
+    const totalValue = subTotal + taxAmount;
 
     const paymentsMade = dealerPayments
         .filter(p => p.stockOrderId === order._id)
@@ -119,6 +125,16 @@ const StockOrderInvoiceModal: React.FC<StockOrderInvoiceModalProps> = ({ isOpen,
                                     })}
                                 </tbody>
                                 <tfoot className="bg-gray-100 font-semibold">
+                                    <tr>
+                                        <td colSpan={3} className="px-6 py-3 text-right text-sm text-gray-800">Subtotal</td>
+                                        <td className="px-6 py-3 text-right text-sm text-gray-800">Rs. {subTotal.toLocaleString()}</td>
+                                    </tr>
+                                    {taxRate > 0 && (
+                                        <tr>
+                                            <td colSpan={3} className="px-6 py-3 text-right text-sm text-gray-800">Tax ({taxRate}%)</td>
+                                            <td className="px-6 py-3 text-right text-sm text-gray-800">Rs. {taxAmount.toLocaleString()}</td>
+                                        </tr>
+                                    )}
                                     <tr>
                                         <td colSpan={3} className="px-6 py-3 text-right text-sm text-gray-800">Total Order Value</td>
                                         <td className="px-6 py-3 text-right text-sm text-gray-800">Rs. {totalValue.toLocaleString()}</td>

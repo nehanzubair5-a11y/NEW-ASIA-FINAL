@@ -12,11 +12,12 @@ import { printElementById } from '../../../utils/print.ts';
 import usePagination from '../../../hooks/usePagination.ts';
 import Pagination from '../../shared/Pagination.tsx';
 import ConfirmModal from '../../modals/ConfirmModal.tsx';
+import UploadPaymentProofModal from '../../modals/UploadPaymentProofModal.tsx';
 import Spinner from '../../shared/Spinner.tsx';
 
 const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | 'error' | 'info') => void; }> = ({ showToast }) => {
     const { user } = useAuth();
-    const { stockOrders, products, dealerPayments, confirmOrderReceipt } = useData();
+    const { stockOrders, products, dealerPayments, confirmOrderReceipt, cancelStockOrder, updateStockOrder } = useData();
     const { canCreateOwnStockOrder, canConfirmReceipt } = usePermissions();
     const [isModalOpen, setModalOpen] = useState(false);
     const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -25,6 +26,18 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [orderToConfirm, setOrderToConfirm] = useState<StockOrder | null>(null);
     const [isConfirming, setIsConfirming] = useState(false);
+    const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+    const [orderToCancel, setOrderToCancel] = useState<StockOrder | null>(null);
+    const [isCancelling, setIsCancelling] = useState(false);
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [orderToUpload, setOrderToUpload] = useState<StockOrder | null>(null);
+
+    const handleUploadPaymentProof = async (orderId: string, base64Image: string) => {
+        const order = stockOrders.find(o => o._id === orderId);
+        if (order) {
+            await updateStockOrder({ ...order, proofOfPaymentUrl: base64Image });
+        }
+    };
 
     const findVariant = (variantId: string) => {
         for (const product of products) {
@@ -114,6 +127,26 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
         }
     };
 
+    const handleCancelClick = (order: StockOrder) => {
+        setOrderToCancel(order);
+        setIsCancelConfirmOpen(true);
+    };
+
+    const handleCancelConfirm = async () => {
+        if (!orderToCancel) return;
+        setIsCancelling(true);
+        try {
+            await cancelStockOrder(orderToCancel._id);
+            showToast("Order cancelled successfully!", "success");
+        } catch (error) {
+            showToast("Failed to cancel order.", "error");
+        } finally {
+            setIsCancelling(false);
+            setOrderToCancel(null);
+            setIsCancelConfirmOpen(false);
+        }
+    };
+
 
     const getStatusColor = (status: OrderStatus) => {
         switch (status) {
@@ -147,15 +180,15 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                 </div>
             </div>
 
-             <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex items-center justify-between no-print">
-                <div className="flex items-center space-x-4">
-                     <div className="relative">
-                        <input type="text" placeholder="Search by product..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm bg-white dark:bg-slate-700" />
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-lg shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 no-print">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full">
+                     <div className="relative w-full md:w-64">
+                        <input type="text" placeholder="Search by product..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm bg-white dark:bg-slate-700 w-full" />
                          <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><svg className="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path></svg></div>
                     </div>
-                    <div className="flex items-center">
-                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2">Status:</label>
-                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm bg-white dark:bg-slate-700">
+                    <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                        <label className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">Status:</label>
+                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm bg-white dark:bg-slate-700 w-full md:w-auto">
                             <option value="all">All Statuses</option>
                             {Object.values(OrderStatus).map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
@@ -174,7 +207,7 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                         <thead className="bg-slate-100/80 dark:bg-slate-700/50">
                             <tr>
                                 <th className="px-2 py-3 w-12 no-print"></th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Order Date</th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Request Timestamp</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Payment Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Items (Req/App)</th>
@@ -198,7 +231,15 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                                                     </button>
                                                 </Tooltip>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{new Date(order.requestTimestamp).toLocaleDateString()}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                                {new Date(order.requestTimestamp).toLocaleString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${getStatusColor(order.status)}`}>
                                                     {order.status}
@@ -215,12 +256,25 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                                                 </Tooltip>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap no-print">
-                                                {canConfirm && (
-                                                    <button onClick={() => handleConfirmClick(order)} className="flex items-center space-x-2 py-2 px-3 border border-transparent shadow-sm text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
-                                                        <CheckCircleIcon className="w-4 h-4" />
-                                                        <span>Confirm Receipt</span>
-                                                    </button>
-                                                )}
+                                                <div className="flex space-x-2">
+                                                    {canConfirm && (
+                                                        <button onClick={() => handleConfirmClick(order)} className="flex items-center space-x-2 py-2 px-3 border border-transparent shadow-sm text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                                                            <CheckCircleIcon className="w-4 h-4" />
+                                                            <span>Confirm Receipt</span>
+                                                        </button>
+                                                    )}
+                                                    {order.status === OrderStatus.Pending && (
+                                                        <button onClick={() => handleCancelClick(order)} className="flex items-center space-x-2 py-2 px-3 border border-transparent shadow-sm text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700">
+                                                            <span>Cancel</span>
+                                                        </button>
+                                                    )}
+                                                    {(order.status === OrderStatus.Approved || order.status === OrderStatus.PartiallyApproved) && paymentStatus.status !== 'Paid' && (
+                                                        <button onClick={() => { setOrderToUpload(order); setIsUploadModalOpen(true); }} className="flex items-center space-x-2 py-2 px-3 border border-transparent shadow-sm text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                                            <ClipboardListIcon className="w-4 h-4" />
+                                                            <span>Upload Payment Proof</span>
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                         {isExpanded && (
@@ -229,10 +283,18 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                                                     <div id={`my-order-details-${order._id}`} className="p-4 mx-4 my-2 border-l-4 border-accent bg-slate-100 dark:bg-slate-700 rounded-r-md">
                                                         <div className="flex justify-between items-center mb-2">
                                                             <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 px-4">Order Details</h4>
-                                                            <button onClick={() => handlePrintOrder(order._id)} className="flex items-center space-x-1 text-xs font-semibold text-primary hover:underline no-print">
-                                                                <PrintIcon className="w-4 h-4" />
-                                                                <span>Print</span>
-                                                            </button>
+                                                            <div className="flex items-center space-x-4">
+                                                                {order.proofOfPaymentUrl && (
+                                                                    <a href={order.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1 text-xs font-semibold text-blue-600 hover:underline no-print">
+                                                                        <ClipboardListIcon className="w-4 h-4" />
+                                                                        <span>View Payment Proof</span>
+                                                                    </a>
+                                                                )}
+                                                                <button onClick={() => handlePrintOrder(order._id)} className="flex items-center space-x-1 text-xs font-semibold text-primary hover:underline no-print">
+                                                                    <PrintIcon className="w-4 h-4" />
+                                                                    <span>Print</span>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                         <table className="min-w-full">
                                                             <thead className="bg-slate-200 dark:bg-slate-600">
@@ -248,15 +310,16 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                                                                 {order.items.map((item: StockOrderItem) => {
                                                                     const variant = findVariant(item.variantId);
                                                                     const approvedItem = order.approvedItems?.find(ai => ai.variantId === item.variantId);
-                                                                    const approvedQuantity = approvedItem?.approvedQuantity ?? (order.status === OrderStatus.Pending ? 0 : item.quantity);
-                                                                    const subtotal = (variant?.price ?? 0) * approvedQuantity;
+                                                                    const isPending = order.status === OrderStatus.Pending;
+                                                                    const quantityToCalculate = isPending ? item.quantity : (approvedItem?.approvedQuantity ?? 0);
+                                                                    const subtotal = (variant?.price ?? 0) * quantityToCalculate;
 
                                                                     return (
                                                                         <tr key={item.variantId}>
                                                                             <td className="px-4 py-2 text-sm text-slate-800 dark:text-slate-200">{variant?.name || 'Unknown Variant'}</td>
                                                                             <td className="px-4 py-2 text-sm text-slate-500 dark:text-slate-400 text-center">{item.quantity}</td>
-                                                                            <td className={`px-4 py-2 text-sm font-bold text-center ${approvedQuantity < item.quantity ? 'text-blue-600' : 'text-slate-800 dark:text-slate-200'}`}>
-                                                                                {approvedQuantity}
+                                                                            <td className={`px-4 py-2 text-sm font-bold text-center ${!isPending && quantityToCalculate < item.quantity ? 'text-blue-600' : 'text-slate-800 dark:text-slate-200'}`}>
+                                                                                {isPending ? 'Pending' : quantityToCalculate}
                                                                             </td>
                                                                             <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 text-right">
                                                                                 {variant ? `Rs. ${variant.price.toLocaleString()}` : 'N/A'}
@@ -268,6 +331,21 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                                                                     );
                                                                 })}
                                                             </tbody>
+                                                            <tfoot className="bg-slate-50 dark:bg-slate-800">
+                                                                <tr>
+                                                                    <td colSpan={4} className="px-4 py-3 text-right text-sm font-bold text-slate-800 dark:text-slate-200">
+                                                                        {order.status === OrderStatus.Pending ? 'Estimated Total:' : 'Actual Total:'}
+                                                                    </td>
+                                                                    <td className="px-4 py-3 text-right text-sm font-bold text-primary">
+                                                                        Rs. {order.items.reduce((sum, item) => {
+                                                                            const variant = findVariant(item.variantId);
+                                                                            const approvedItem = order.approvedItems?.find(ai => ai.variantId === item.variantId);
+                                                                            const qty = order.status === OrderStatus.Pending ? item.quantity : (approvedItem?.approvedQuantity ?? 0);
+                                                                            return sum + (qty * (variant?.price ?? 0));
+                                                                        }, 0).toLocaleString()}
+                                                                    </td>
+                                                                </tr>
+                                                            </tfoot>
                                                         </table>
                                                     </div>
                                                 </td>
@@ -304,6 +382,20 @@ const MyStockOrders: React.FC<{ showToast: (message: string, type: 'success' | '
                 onConfirm={handleConfirmReceipt}
                 title="Confirm Order Receipt"
                 message={`Are you sure you want to confirm receipt for order #${orderToConfirm?._id.slice(-6)}? This will add the approved items to your inventory.`}
+            />
+            <ConfirmModal
+                isOpen={isCancelConfirmOpen}
+                onClose={() => setIsCancelConfirmOpen(false)}
+                onConfirm={handleCancelConfirm}
+                title="Cancel Stock Order"
+                message={`Are you sure you want to cancel order #${orderToCancel?._id.slice(-6)}? This action cannot be undone.`}
+            />
+            <UploadPaymentProofModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+                order={orderToUpload}
+                onUpload={handleUploadPaymentProof}
+                showToast={showToast}
             />
         </div>
     );

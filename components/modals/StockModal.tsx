@@ -118,13 +118,17 @@ const StockModal: React.FC<StockModalProps> = ({ isOpen, onClose, onSave, showTo
                                 className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2"
                             >
                                 <option value="" disabled>Select a variant</option>
-                                {products.map(p => (
-                                    <optgroup label={`${p.brand} ${p.modelName}`} key={p._id}>
-                                        {p.variants.map(v => (
-                                            <option key={v._id} value={v._id}>{v.name} ({v.color})</option>
-                                        ))}
-                                    </optgroup>
-                                ))}
+                                {products.filter(p => p.isActive !== false).map(p => {
+                                    const activeVariants = p.variants.filter(v => v.isActive !== false);
+                                    if (activeVariants.length === 0) return null;
+                                    return (
+                                        <optgroup label={`${p.brand} ${p.modelName}`} key={p._id}>
+                                            {activeVariants.map(v => (
+                                                <option key={v._id} value={v._id}>{v.name} ({v.color})</option>
+                                            ))}
+                                        </optgroup>
+                                    );
+                                })}
                             </select>
                         </div>
                         <div>

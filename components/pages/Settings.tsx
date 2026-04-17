@@ -88,6 +88,26 @@ const Settings: React.FC<{ showToast: (message: string, type: 'success' | 'error
                         </div>
                     </div>
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
+                        <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">Financial Settings</h3>
+                        <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
+                            <div>
+                                <h4 className="font-medium text-slate-900 dark:text-slate-100">Default Tax Rate (%)</h4>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xl">Set the default tax rate applied to products and orders.</p>
+                            </div>
+                            <div className="w-32">
+                                <input 
+                                    type="number" 
+                                    min="0" 
+                                    max="100" 
+                                    step="0.1"
+                                    value={settings.taxRate || 0} 
+                                    onChange={(e) => updateSettings({ taxRate: parseFloat(e.target.value) || 0 })}
+                                    className="block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary dark:bg-slate-700 dark:border-slate-600 dark:text-white" 
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm">
                         <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-2">Appearance</h3>
                         <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
                              <div>

@@ -107,6 +107,7 @@ const Sidebar: React.FC<{
                         <NavItem page="CompanyStock" activePage={activePage} setActivePage={setActivePage} icon={<ArchiveIcon />} hidden={!permissions.canViewStockPage} onClick={handleItemClick}>Company Stock</NavItem>
                         <NavItem page="DealerStock" activePage={activePage} setActivePage={setActivePage} icon={<UsersIcon />} hidden={!permissions.canViewStockPage} onClick={handleItemClick}>Dealer Stock</NavItem>
                         <NavItem page="Bookings" activePage={activePage} setActivePage={setActivePage} icon={<CalendarIcon />} hidden={!permissions.canViewBookingsPage} onClick={handleItemClick}>Bookings</NavItem>
+                        <NavItem page="Customers" activePage={activePage} setActivePage={setActivePage} icon={<UsersIcon />} hidden={!permissions.canViewBookingsPage} onClick={handleItemClick}>Customers</NavItem>
                         <NavItem page="Approvals" activePage={activePage} setActivePage={setActivePage} icon={<CheckSquareIcon />} hidden={!permissions.canApproveStockOrder} onClick={handleItemClick}>Approvals</NavItem>
                         <NavItem page="Stock Orders" activePage={activePage} setActivePage={setActivePage} icon={<ClipboardListIcon />} hidden={!permissions.canViewStockOrdersPage} onClick={handleItemClick}>Stock Orders</NavItem>
                         <NavItem page="Announcements" activePage={activePage} setActivePage={setActivePage} icon={<MegaphoneIcon />} hidden={!permissions.canManageAnnouncements} onClick={handleItemClick}>Announcements</NavItem>

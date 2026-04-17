@@ -178,14 +178,14 @@ const StockOrders: React.FC<{ showToast: (message: string, type: 'success' | 'er
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-4 w-full md:w-auto">
-                        <div className="flex items-center w-full md:w-auto">
-                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2 shrink-0">Status:</label>
+                        <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">Status:</label>
                             <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value as OrderStatus | 'all'); setCurrentPage(1); }} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm w-full md:w-32 bg-white dark:bg-slate-700">
                                 <option value="all">All</option>{Object.values(OrderStatus).map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
-                        <div className="flex items-center w-full md:w-auto">
-                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2 shrink-0">Dealer:</label>
+                        <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">Dealer:</label>
                             <select value={dealerFilter} onChange={(e) => { setDealerFilter(e.target.value); setCurrentPage(1); }} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm w-full md:w-40 bg-white dark:bg-slate-700">
                                 <option value="all">All</option>{dealers.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
                             </select>
@@ -193,12 +193,12 @@ const StockOrders: React.FC<{ showToast: (message: string, type: 'success' | 'er
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-4 w-full md:w-auto">
-                        <div className="flex items-center w-full md:w-auto">
-                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2 shrink-0">From:</label>
+                        <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">From:</label>
                             <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm w-full md:w-auto bg-white dark:bg-slate-700" />
                         </div>
-                        <div className="flex items-center w-full md:w-auto">
-                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2 shrink-0">To:</label>
+                        <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                            <label className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">To:</label>
                             <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="p-2 border border-slate-300 dark:border-slate-600 rounded-md shadow-sm text-sm w-full md:w-auto bg-white dark:bg-slate-700" />
                         </div>
                     </div>
@@ -252,7 +252,15 @@ const StockOrders: React.FC<{ showToast: (message: string, type: 'success' | 'er
                                                 <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{dealer?.name}</div>
                                                 <div className="text-sm text-slate-500 dark:text-slate-400">{dealer?.city}</div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">{new Date(order.requestTimestamp).toLocaleString()}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 dark:text-slate-400">
+                                                {new Date(order.requestTimestamp).toLocaleString('en-US', {
+                                                    year: 'numeric',
+                                                    month: 'short',
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                })}
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex flex-col gap-1">
                                                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize w-max ${getStatusColor(order.status)}`}>
@@ -309,10 +317,18 @@ const StockOrders: React.FC<{ showToast: (message: string, type: 'success' | 'er
                                                                 <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200">Order Details</h4>
                                                                 {order.trackingNumber && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Tracking ID: <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{order.trackingNumber}</span></p>}
                                                             </div>
-                                                            <button onClick={() => handlePrintOrder(order._id)} className="flex items-center space-x-1 text-xs font-semibold text-primary hover:underline no-print">
-                                                                <PrintIcon className="w-4 h-4" />
-                                                                <span>Print</span>
-                                                            </button>
+                                                            <div className="flex items-center space-x-4">
+                                                                {order.proofOfPaymentUrl && (
+                                                                    <a href={order.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-1 text-xs font-semibold text-blue-600 hover:underline no-print">
+                                                                        <ClipboardListIcon className="w-4 h-4" />
+                                                                        <span>View Payment Proof</span>
+                                                                    </a>
+                                                                )}
+                                                                <button onClick={() => handlePrintOrder(order._id)} className="flex items-center space-x-1 text-xs font-semibold text-primary hover:underline no-print">
+                                                                    <PrintIcon className="w-4 h-4" />
+                                                                    <span>Print</span>
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                         <div className="overflow-x-auto">
                                                             <table className="min-w-full">
@@ -330,25 +346,42 @@ const StockOrders: React.FC<{ showToast: (message: string, type: 'success' | 'er
                                                                         const found = findVariant(item.variantId);
                                                                         const variant = found?.variant;
                                                                         const approvedItem = order.approvedItems?.find(ai => ai.variantId === item.variantId);
-                                                                        const approvedQuantity = approvedItem?.approvedQuantity;
-                                                                        const subtotal = (variant?.price ?? 0) * (approvedQuantity ?? 0);
+                                                                        const isPending = order.status === OrderStatus.Pending;
+                                                                        const quantityToCalculate = isPending ? item.quantity : (approvedItem?.approvedQuantity ?? 0);
+                                                                        const subtotal = (variant?.price ?? 0) * quantityToCalculate;
                                                                         return (
                                                                             <tr key={item.variantId}>
                                                                                 <td className="px-4 py-2 text-sm text-slate-800 dark:text-slate-200">{variant?.name || 'Unknown Variant'}</td>
                                                                                 <td className="px-4 py-2 text-sm text-slate-500 dark:text-slate-400 text-center">{item.quantity}</td>
                                                                                 <td className={`px-4 py-2 text-sm font-bold text-center`}>
-                                                                                    {approvedQuantity !== undefined ? approvedQuantity : 'N/A'}
+                                                                                    {isPending ? 'Pending' : quantityToCalculate}
                                                                                 </td>
                                                                                 <td className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 text-right">
                                                                                     {variant ? `Rs. ${variant.price.toLocaleString()}` : 'N/A'}
                                                                                 </td>
                                                                                 <td className="px-4 py-2 text-sm text-slate-800 dark:text-slate-200 font-semibold text-right">
-                                                                                    {approvedQuantity !== undefined ? `Rs. ${subtotal.toLocaleString()}` : 'N/A'}
+                                                                                    {`Rs. ${subtotal.toLocaleString()}`}
                                                                                 </td>
                                                                             </tr>
                                                                         );
                                                                     })}
                                                                 </tbody>
+                                                                <tfoot className="bg-slate-50 dark:bg-slate-800">
+                                                                    <tr>
+                                                                        <td colSpan={4} className="px-4 py-3 text-right text-sm font-bold text-slate-800 dark:text-slate-200">
+                                                                            {order.status === OrderStatus.Pending ? 'Estimated Total:' : 'Actual Total:'}
+                                                                        </td>
+                                                                        <td className="px-4 py-3 text-right text-sm font-bold text-primary">
+                                                                            Rs. {order.items.reduce((sum, item) => {
+                                                                                const found = findVariant(item.variantId);
+                                                                                const variant = found?.variant;
+                                                                                const approvedItem = order.approvedItems?.find(ai => ai.variantId === item.variantId);
+                                                                                const qty = order.status === OrderStatus.Pending ? item.quantity : (approvedItem?.approvedQuantity ?? 0);
+                                                                                return sum + (qty * (variant?.price ?? 0));
+                                                                            }, 0).toLocaleString()}
+                                                                        </td>
+                                                                    </tr>
+                                                                </tfoot>
                                                             </table>
                                                         </div>
                                                     </div>

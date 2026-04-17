@@ -24,7 +24,7 @@ const Announcements = React.lazy(() => import('./pages/Announcements.tsx'));
 const Messages = React.lazy(() => import('./pages/Messages.tsx'));
 const Commission = React.lazy(() => import('./pages/Commission.tsx'));
 const Finance = React.lazy(() => import('./pages/Finance.tsx'));
-
+const Customers = React.lazy(() => import('./pages/Customers.tsx'));
 
 // Eagerly load dashboard components as they are part of the main page
 const AdminDashboard = React.lazy(() => import('./dashboards/AdminDashboard.tsx'));
@@ -78,6 +78,7 @@ const DashboardLayout: React.FC = () => {
             case 'Messages': return <Messages showToast={showToast} initialState={pageState} onInitialStateConsumed={() => setPageState(null)} />;
             case 'Reports': return <Reports showToast={showToast} />;
             case 'Finance': return <Finance showToast={showToast} />;
+            case 'Customers': return <Customers showToast={showToast} />;
             case 'Commission': return <Commission />;
             case 'Audit Logs': return <AuditLogs />;
             case 'Settings': return <Settings showToast={showToast} />;

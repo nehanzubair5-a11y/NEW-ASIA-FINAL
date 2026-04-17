@@ -301,8 +301,8 @@ const Dealers: React.FC<{
                         </div>
                     </div>
 
-                    <div className="flex items-center w-full md:w-auto">
-                        <label htmlFor="city-filter" className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2 shrink-0">City:</label>
+                    <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                        <label htmlFor="city-filter" className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">City:</label>
                         <select
                             id="city-filter"
                             value={cityFilter}
@@ -313,8 +313,8 @@ const Dealers: React.FC<{
                             {uniqueCities.map(city => <option key={city} value={city}>{city}</option>)}
                         </select>
                     </div>
-                    <div className="flex items-center w-full md:w-auto">
-                        <label htmlFor="status-filter" className="text-sm font-medium text-slate-600 dark:text-slate-400 mr-2 shrink-0">Status:</label>
+                    <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                        <label htmlFor="status-filter" className="text-sm font-medium text-slate-600 dark:text-slate-400 shrink-0">Status:</label>
                         <select
                             id="status-filter"
                             value={statusFilter}

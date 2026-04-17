@@ -18,6 +18,7 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ isOpen, onClose, showToas
     const { isOnline, addToQueue } = useAppContext();
     const { user } = useAuth();
     const [orderItems, setOrderItems] = useState<(Partial<StockOrderItem> & { error?: string })[]>([{}]);
+    const [proofOfPaymentUrl, setProofOfPaymentUrl] = useState<string>('');
     const [isVisible, setIsVisible] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -25,11 +26,23 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ isOpen, onClose, showToas
         if (isOpen) {
             setIsVisible(true);
             setOrderItems([{}]); // Reset form on open
+            setProofOfPaymentUrl('');
         } else {
             setTimeout(() => setIsVisible(false), 200);
         }
     }, [isOpen]);
-    
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setProofOfPaymentUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const validateItem = (item: Partial<StockOrderItem> & { error?: string }): string | undefined => {
         if (item.quantity === undefined || item.quantity === null) return undefined;
 
@@ -111,6 +124,7 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ isOpen, onClose, showToas
             const orderData = {
                 dealerId: user!.dealerId!,
                 items: finalItems,
+                proofOfPaymentUrl: proofOfPaymentUrl || undefined,
             };
             
             if (isOnline) {
@@ -152,13 +166,17 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ isOpen, onClose, showToas
                                             className="mt-1 block w-full shadow-sm sm:text-sm border-slate-300 dark:border-slate-600 rounded-md p-2 focus:ring-2 focus:ring-primary/50 focus:border-primary bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
                                         >
                                             <option value="" disabled>Select a product...</option>
-                                            {products.map(p => (
-                                                <optgroup label={`${p.brand} ${p.modelName}`} key={p._id}>
-                                                    {p.variants.map(v => (
-                                                        <option key={v._id} value={`${p._id},${v._id}`}>{v.name}</option>
-                                                    ))}
-                                                </optgroup>
-                                            ))}
+                                            {products.filter(p => p.isActive !== false).map(p => {
+                                                const activeVariants = p.variants.filter(v => v.isActive !== false);
+                                                if (activeVariants.length === 0) return null;
+                                                return (
+                                                    <optgroup label={`${p.brand} ${p.modelName}`} key={p._id}>
+                                                        {activeVariants.map(v => (
+                                                            <option key={v._id} value={`${p._id},${v._id}`}>{v.name}</option>
+                                                        ))}
+                                                    </optgroup>
+                                                );
+                                            })}
                                         </select>
                                     </div>
                                     <div className="md:col-span-3">
@@ -197,6 +215,28 @@ const NewOrderModal: React.FC<NewOrderModalProps> = ({ isOpen, onClose, showToas
                             <PlusIcon className="w-4 h-4" />
                             <span>Add Another Item</span>
                         </button>
+                        
+                        <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Proof of Payment (Optional)</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className="block w-full text-sm text-slate-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                            />
+                            {proofOfPaymentUrl && (
+                                <div className="mt-4 relative w-32 h-32 rounded-md overflow-hidden border border-slate-200 dark:border-slate-700">
+                                    <img src={proofOfPaymentUrl} alt="Proof of Payment" className="object-cover w-full h-full" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setProofOfPaymentUrl('')}
+                                        className="absolute top-1 right-1 bg-white rounded-full p-1 shadow-sm text-red-500 hover:text-red-700"
+                                    >
+                                        <XCircleIcon />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="px-6 py-4 bg-slate-50 dark:bg-slate-700/50 text-right space-x-2 rounded-b-lg flex-shrink-0 border-t border-slate-200 dark:border-slate-700">
                         <button type="button" onClick={onClose} disabled={isSubmitting} className="py-2 px-4 border border-slate-300 dark:border-slate-600 shadow-sm text-sm font-medium rounded-md text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 disabled:opacity-50">Cancel</button>

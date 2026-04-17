@@ -33,6 +33,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
     const [modelName, setModelName] = useState('');
     const [specifications, setSpecifications] = useState({ engine: '', mileage: '' });
     const [variantGroups, setVariantGroups] = useState<VariantGroup[]>([]);
+    const [isActive, setIsActive] = useState(true);
+    const [imageUrl, setImageUrl] = useState('');
     
     const [isVisible, setIsVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -73,12 +75,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
                 setModelName(product.modelName);
                 setSpecifications(product.specifications);
                 setVariantGroups(groups.length > 0 ? groups : [{ id: `group-${Date.now()}`, name: '', colors: [{ id: `color-${Date.now()}`, color: '', sku: '', price: 0, error: undefined }] }]);
+                setIsActive(product.isActive !== false);
+                setImageUrl(product.imageUrl || '');
             } else {
                 // Reset to blank form
                 setBrand('');
                 setModelName('');
                 setSpecifications({ engine: '', mileage: '' });
                 setVariantGroups([{ id: `group-${Date.now()}`, name: '', colors: [{ id: `color-${Date.now()}`, color: '', sku: '', price: 0, error: undefined }] }]);
+                setIsActive(true);
+                setImageUrl('');
             }
         } else {
             setTimeout(() => setIsVisible(false), 200);
@@ -192,6 +198,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
             brand,
             modelName,
             specifications,
+            isActive,
+            imageUrl,
             variants: variants.map((v, i) => ({ ...v, _id: `temp-id-${i}`}))
         };
 
@@ -233,6 +241,23 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, onSave, pr
                                 <div>
                                     <label htmlFor="mileage" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Mileage Spec</label>
                                     <input type="text" name="mileage" id="mileage" value={specifications.mileage} onChange={e => setSpecifications(s => ({...s, mileage: e.target.value}))} disabled={!canUpdateCore} className="mt-1 block w-full shadow-sm sm:text-sm border-slate-300 dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-700/50" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label htmlFor="imageUrl" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Image URL</label>
+                                    <input type="url" name="imageUrl" id="imageUrl" value={imageUrl} onChange={e => setImageUrl(e.target.value)} disabled={!canUpdateCore} placeholder="https://example.com/image.jpg" className="mt-1 block w-full shadow-sm sm:text-sm border-slate-300 dark:border-slate-600 rounded-md p-2 bg-white dark:bg-slate-700 disabled:bg-slate-100 dark:disabled:bg-slate-700/50" />
+                                </div>
+                                <div className="flex items-center mt-6">
+                                    <input
+                                        type="checkbox"
+                                        id="isActive"
+                                        checked={isActive}
+                                        onChange={(e) => setIsActive(e.target.checked)}
+                                        disabled={!canUpdateCore}
+                                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                    />
+                                    <label htmlFor="isActive" className="ml-2 block text-sm text-slate-700 dark:text-slate-300">
+                                        Product is Active (Available for new orders)
+                                    </label>
                                 </div>
                             </div>
                         </div>

@@ -145,15 +145,15 @@ const MyBookings: React.FC<{ showToast: (message: string, type: 'success' | 'err
                 </div>
             </div>
 
-            <div className="bg-white p-4 rounded-lg shadow-sm flex items-center justify-between no-print">
-                <div className="flex items-center space-x-4">
-                     <div className="relative">
-                        <input type="text" placeholder="Search customer..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm" />
+            <div className="bg-white p-4 rounded-lg shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 no-print">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full">
+                     <div className="relative w-full md:w-64">
+                        <input type="text" placeholder="Search customer..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-8 pr-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm w-full" />
                          <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none"><svg className="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd"></path></svg></div>
                     </div>
-                    <div className="flex items-center">
-                        <label className="text-sm font-medium text-slate-600 mr-2">Status:</label>
-                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="p-2 border border-slate-300 rounded-md shadow-sm text-sm">
+                    <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                        <label className="text-sm font-medium text-slate-600 shrink-0">Status:</label>
+                        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="p-2 border border-slate-300 rounded-md shadow-sm text-sm w-full md:w-auto">
                             <option value="all">All Statuses</option>
                             {Object.values(BookingStatus).map(s => <option key={s} value={s}>{s}</option>)}
                         </select>

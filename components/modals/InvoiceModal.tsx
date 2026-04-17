@@ -2,6 +2,7 @@ import React from 'react';
 import type { Booking } from '../../types.ts';
 import { PrintIcon } from '../icons/Icons.tsx';
 import { useData } from '../../hooks/useData.ts';
+import { useAppContext } from '../../hooks/useAppContext.ts';
 import { printElementById } from '../../utils/print.ts';
 
 interface InvoiceModalProps {
@@ -12,6 +13,7 @@ interface InvoiceModalProps {
 
 const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, booking }) => {
     const { products, dealers } = useData();
+    const { settings } = useAppContext();
 
     const handlePrint = () => {
         printElementById('printable-invoice');
@@ -33,7 +35,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, booking })
     const dealer = dealers.find(d => d._id === booking.dealerId);
     const totalPaid = booking.payments.reduce((sum, p) => sum + p.amount, 0);
     const variantPrice = variant?.price ?? 0;
-    const balanceDue = variantPrice - totalPaid;
+    const taxRate = settings.taxRate || 0;
+    const taxAmount = (variantPrice * taxRate) / 100;
+    const totalWithTax = variantPrice + taxAmount;
+    const balanceDue = totalWithTax - totalPaid;
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-start sm:items-center p-0 sm:p-4 no-print" onClick={onClose}>
@@ -95,6 +100,14 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, booking })
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">{variant?.sku}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">Rs. {variantPrice.toLocaleString()}</td>
                                     </tr>
+                                    {taxRate > 0 && (
+                                        <tr>
+                                            <td colSpan={2} className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 pl-10">
+                                                Tax ({taxRate}%)
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-700">Rs. {taxAmount.toLocaleString()}</td>
+                                        </tr>
+                                    )}
                                     {booking.payments.map((p, i) => (
                                         <tr key={i}>
                                             <td colSpan={2} className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 pl-10">
@@ -105,6 +118,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ isOpen, onClose, booking })
                                     ))}
                                 </tbody>
                                 <tfoot className="bg-gray-100 font-semibold">
+                                    <tr>
+                                        <td colSpan={2} className="px-6 py-3 text-right text-sm text-gray-800">Total Amount</td>
+                                        <td className="px-6 py-3 text-right text-sm text-gray-800">Rs. {totalWithTax.toLocaleString()}</td>
+                                    </tr>
                                     <tr>
                                         <td colSpan={2} className="px-6 py-3 text-right text-sm text-gray-800">Total Paid</td>
                                         <td className="px-6 py-3 text-right text-sm text-gray-800">Rs. {totalPaid.toLocaleString()}</td>

@@ -26,6 +26,7 @@ type SyncStatus = 'synced' | 'pending' | 'syncing' | 'error' | 'offline';
 
 const initialSettings: Settings = {
     theme: 'light',
+    taxRate: 15, // Default tax rate
     notifications: {
         newOrder: true,
         orderApproved: true,

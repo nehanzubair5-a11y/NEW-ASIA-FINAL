@@ -391,10 +391,13 @@ const DealerDetail: React.FC<{ dealerId: string; setActivePage: (page: Page, sta
     return (
         <div id="dealer-detail-content" className="space-y-6">
             <div className="flex justify-between items-center no-print">
-                <button onClick={() => setActivePage('Dealers')} className="flex items-center text-sm font-semibold text-primary hover:underline">
-                    <ArrowLeftIcon className="w-4 h-4 mr-2" />
-                    Back to Dealers List
-                </button>
+                <div className="flex items-center gap-4">
+                    <button onClick={() => setActivePage('Dealers')} className="flex items-center text-sm font-semibold text-primary hover:underline">
+                        <ArrowLeftIcon className="w-4 h-4 mr-2" />
+                        Back to Dealers List
+                    </button>
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 hidden sm:block">Dealer Details</h2>
+                </div>
                 <div className="flex items-center gap-2">
                     <Tooltip content="Send a message">
                         <button onClick={handleSendMessage} className="flex items-center justify-center p-2 border border-slate-300 dark:border-slate-600 shadow-sm rounded-md text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">

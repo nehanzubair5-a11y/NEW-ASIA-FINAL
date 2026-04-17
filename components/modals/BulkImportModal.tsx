@@ -83,7 +83,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, show
             }
             // --- End Enhanced Validation ---
 
-            const { brand, modelname: modelName, variantname: variantName, color, sku, price, engine, mileage } = rowData;
+            const { brand, modelname: modelName, variantname: variantName, color, sku, price, engine, mileage, imageurl: imageUrl } = rowData;
             
             if (seenSkus.has(sku.toLowerCase())) {
                 localErrors.push({ row: i + 1, message: `Duplicate SKU "${sku}" found in file. SKUs must be unique.` });
@@ -103,11 +103,15 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, show
             if (productsMap.has(productKey)) {
                 const existingProduct = productsMap.get(productKey)!;
                 existingProduct.variants.push(newVariant);
+                if (imageUrl && !existingProduct.imageUrl) {
+                    existingProduct.imageUrl = imageUrl;
+                }
             } else {
                 productsMap.set(productKey, {
                     brand, modelName,
                     variants: [newVariant],
-                    specifications: { engine: engine || '', mileage: mileage || '' }
+                    specifications: { engine: engine || '', mileage: mileage || '' },
+                    imageUrl: imageUrl || undefined
                 });
             }
         }
@@ -151,7 +155,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, show
     };
 
     const downloadTemplate = () => {
-        const csvTemplate = "brand,modelName,variantName,color,sku,price,engine,mileage\nNew Asia,Bike,NA-70cc,Blue,NA-B70-BL,115000,70cc,55 km/l\nNew Asia,Bike,NA-125cc,Blue,NA-B125-BL,190000,125cc,45 km/l\nRamza,Scooty,Standard,Red,RMZ-S-R,160000,100cc,45 km/l";
+        const csvTemplate = "brand,modelName,variantName,color,sku,price,engine,mileage,imageUrl\nNew Asia,Bike,NA-70cc,Blue,NA-B70-BL,115000,70cc,55 km/l,https://example.com/bike.jpg\nNew Asia,Bike,NA-125cc,Blue,NA-B125-BL,190000,125cc,45 km/l,\nRamza,Scooty,Standard,Red,RMZ-S-R,160000,100cc,45 km/l,";
         const blob = new Blob([csvTemplate], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         const url = URL.createObjectURL(blob);
@@ -233,7 +237,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({ isOpen, onClose, show
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
                             <p className="font-semibold mb-1">CSV Format Instructions:</p>
                              <ul className="list-disc list-inside space-y-1">
-                                <li>Required columns: `brand`, `modelName`, `variantName`, `color`, `sku`, `price`. Optional: `engine`, `mileage`.</li>
+                                <li>Required columns: `brand`, `modelName`, `variantName`, `color`, `sku`, `price`. Optional: `engine`, `mileage`, `imageUrl`.</li>
                                 <li>The system intelligently updates or creates products based on your file.</li>
                                 <li><strong>To update an existing product</strong>, ensure the `brand` and `modelName` match exactly.</li>
                                 <li>The `sku` is used to identify variants. If a matching `sku` is found within that product, its `variantName` and `price` will be updated.</li>

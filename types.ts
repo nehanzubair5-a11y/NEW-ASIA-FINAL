@@ -50,6 +50,7 @@ export interface ProductVariant {
     color: string; // e.g. Red
     sku: string;
     price: number;
+    isActive?: boolean;
 }
 
 export interface PriceHistory {
@@ -66,7 +67,9 @@ export interface Product {
         engine: string;
         mileage: string;
     };
+    imageUrl?: string;
     priceHistory?: PriceHistory[];
+    isActive?: boolean;
 }
 
 export enum StockStatus {
@@ -151,8 +154,19 @@ export interface DealerPayment {
     proofOfPayment?: string;
 }
 
+export interface Customer {
+    _id: string;
+    dealerId: string;
+    name: string;
+    phone: string;
+    cnic?: string;
+    address?: string;
+    createdAt: string;
+}
+
 export interface Booking {
     _id: string;
+    customerId?: string;
     customerName: string;
     customerPhone: string;
     dealerId: string;
@@ -194,7 +208,7 @@ export interface Message {
 }
 
 
-export type Page = 'Dashboard' | 'Dealers' | 'Products' | 'CompanyStock' | 'DealerStock' | 'Bookings' | 'Stock Orders' | 'Reports' | 'Audit Logs' | 'Settings' | 'DealerDetail' | 'Users' | 'Profile' | 'Approvals' | 'Announcements' | 'Messages' | 'Commission' | 'Finance';
+export type Page = 'Dashboard' | 'Dealers' | 'Products' | 'CompanyStock' | 'DealerStock' | 'Bookings' | 'Stock Orders' | 'Reports' | 'Audit Logs' | 'Settings' | 'DealerDetail' | 'Users' | 'Profile' | 'Approvals' | 'Announcements' | 'Messages' | 'Commission' | 'Finance' | 'Customers';
 
 export type DealerPage = 'Dashboard' | 'My Orders' | 'My Stock' | 'My Bookings' | 'My Backups' | 'Profile' | 'Announcements' | 'Messages';
 
@@ -219,6 +233,7 @@ export enum OrderStatus {
     Dispatched = 'Dispatched',
     InTransit = 'In-Transit',
     Delivered = 'Delivered',
+    Cancelled = 'Cancelled',
 }
 
 export interface ApprovedOrderItem extends StockOrderItem {
@@ -234,6 +249,7 @@ export interface StockOrder {
     approvedItems?: ApprovedOrderItem[];
     allocatedStockIds?: string[];
     trackingNumber?: string;
+    proofOfPaymentUrl?: string;
 }
 
 export type RecommendationType = 'Approve' | 'Reject' | 'Review';
@@ -253,6 +269,7 @@ export interface BackupRecord {
 
 export interface Settings {
     theme: 'light' | 'dark';
+    taxRate?: number; // Tax rate as a percentage (e.g., 15 for 15%)
     notifications: {
         newOrder: boolean;
         orderApproved: boolean;
@@ -302,6 +319,7 @@ export interface DataContextType {
     stock: StockItem[];
     stockOrders: StockOrder[];
     bookings: Booking[];
+    customers: Customer[];
     dealerPayments: DealerPayment[];
     announcements: Announcement[];
     announcementRecipients: AnnouncementRecipient[];
@@ -309,6 +327,7 @@ export interface DataContextType {
     messages: Message[];
     addDealer: (dealerData: Omit<Dealer, '_id' | 'createdAt' | 'registrationApproved'>) => Promise<void>;
     updateDealer: (updatedDealer: Dealer) => Promise<void>;
+    deleteDealer: (dealerId: string) => Promise<void>;
     approveDealer: (dealerId: string) => Promise<void>;
     revokeDealer: (dealerId: string) => Promise<void>;
     updateDealerStatusBulk: (dealerIds: string[], approved: boolean) => Promise<void>;
@@ -318,14 +337,18 @@ export interface DataContextType {
     updateProduct: (updatedProduct: Product) => Promise<void>;
     addOrUpdateProductsBulk: (productsToImport: Omit<Product, '_id' | 'priceHistory'>[]) => Promise<{ created: number; updated: number; }>;
     addStock: (stockData: Omit<StockItem, '_id' | 'assignedAt'>) => Promise<void>;
+    updateStockItem: (stockId: string, updates: Partial<StockItem>) => Promise<void>;
     updateStockStatusBulk: (stockIds: string[], status: StockStatus) => Promise<void>;
     processAllocationRequest: (orderId: string, approvedItems: ApprovedOrderItem[], status: OrderStatus) => Promise<void>;
     dispatchStockOrder: (orderId: string, trackingNumber?: string) => Promise<void>;
     confirmOrderReceipt: (orderId: string) => Promise<void>;
     createStockOrder: (orderData: Omit<StockOrder, '_id' | 'requestTimestamp' | 'status' | 'approvedItems'>) => Promise<void>;
+    cancelStockOrder: (orderId: string) => Promise<void>;
+    updateStockOrder: (updatedOrder: StockOrder) => Promise<void>;
     addBooking: (bookingData: Omit<Booking, '_id' | 'bookingTimestamp' | 'payments' | 'stockItemId'>) => Promise<void>;
     updateBooking: (updatedBooking: Booking) => Promise<void>;
     cancelBooking: (bookingId: string) => Promise<void>;
+    addCustomer: (customerData: Omit<Customer, '_id' | 'createdAt'>) => Promise<Customer>;
     addPayment: (bookingId: string, payment: Payment) => Promise<void>;
     addDealerPayment: (paymentData: Omit<DealerPayment, '_id' | 'timestamp'>) => Promise<void>;
     allocateStockToBooking: (bookingId: string, stockItemId: string) => Promise<void>;

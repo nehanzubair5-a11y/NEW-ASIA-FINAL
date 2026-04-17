@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Booking } from '../../types.ts';
+import type { Booking, Customer } from '../../types.ts';
 import { BookingStatus } from '../../types.ts';
 import { useData } from '../../hooks/useData.ts';
 import { useAuth } from '../../hooks/useAuth.ts';
@@ -13,10 +13,14 @@ interface BookingModalProps {
 
 const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onSave, booking }) => {
     const { user } = useAuth();
-    const { dealers, products } = useData();
+    const { dealers, products, customers, addCustomer } = useData();
     const isDealer = user?.role === 'Dealer';
     
+    const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+
     const [formData, setFormData] = useState<Omit<Booking, '_id' | 'bookingTimestamp' | 'payments'>>({
+        customerId: '',
         customerName: '',
         customerPhone: '',
         dealerId: '',
@@ -27,20 +31,30 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onSave, bo
     useEffect(() => {
         if (booking) { // Editing
             setFormData({
+                customerId: booking.customerId || '',
                 customerName: booking.customerName,
                 customerPhone: booking.customerPhone,
                 dealerId: booking.dealerId,
                 variantId: booking.variantId,
                 status: booking.status,
             });
+            if (booking.customerId) {
+                setSelectedCustomerId(booking.customerId);
+                setIsCreatingCustomer(false);
+            } else {
+                setIsCreatingCustomer(true);
+            }
         } else { // Creating
             setFormData({ 
+                customerId: '',
                 customerName: '', 
                 customerPhone: '', 
                 dealerId: isDealer ? user.dealerId! : (dealers[0]?._id || ''), 
                 variantId: products[0]?.variants[0]?._id || '', 
                 status: BookingStatus.Pending 
             });
+            setIsCreatingCustomer(true);
+            setSelectedCustomerId('');
         }
     }, [booking, isOpen, isDealer, user, dealers, products]);
 
@@ -48,12 +62,50 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onSave, bo
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value as BookingStatus }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleCustomerSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const val = e.target.value;
+        if (val === 'new') {
+            setIsCreatingCustomer(true);
+            setSelectedCustomerId('');
+            setFormData(prev => ({ ...prev, customerId: '', customerName: '', customerPhone: '' }));
+        } else {
+            setIsCreatingCustomer(false);
+            setSelectedCustomerId(val);
+            const customer = customers.find(c => c._id === val);
+            if (customer) {
+                setFormData(prev => ({ 
+                    ...prev, 
+                    customerId: customer._id,
+                    customerName: customer.name, 
+                    customerPhone: customer.phone 
+                }));
+            }
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData, !!booking);
+        
+        let finalFormData = { ...formData };
+        
+        if (isCreatingCustomer && formData.customerName && formData.customerPhone) {
+            try {
+                const newCustomer = await addCustomer({
+                    name: formData.customerName,
+                    phone: formData.customerPhone
+                });
+                finalFormData.customerId = newCustomer._id;
+            } catch (error) {
+                console.error("Failed to create customer:", error);
+                // We can still proceed with the booking even if customer creation fails,
+                // or we could show an error. For now, we'll just proceed.
+            }
+        }
+        
+        onSave(finalFormData, !!booking);
     };
     
     return (
@@ -64,25 +116,53 @@ const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, onSave, bo
                         <h3 className="text-xl font-semibold text-gray-800">{booking ? 'Edit Booking' : 'Create New Booking'}</h3>
                     </div>
                     <div className="p-6 space-y-4 flex-grow overflow-y-auto">
-                        <div>
-                            <label htmlFor="customerName" className="block text-sm font-medium text-gray-700">Customer Name</label>
-                            <input type="text" name="customerName" id="customerName" value={formData.customerName} onChange={handleChange} required className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary" />
-                        </div>
-                        <div>
-                            <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700">Customer Phone</label>
-                            <input type="tel" name="customerPhone" id="customerPhone" value={formData.customerPhone} onChange={handleChange} required className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary" />
-                        </div>
+                        {!booking && (
+                            <div>
+                                <label htmlFor="customerSelect" className="block text-sm font-medium text-gray-700">Customer</label>
+                                <select id="customerSelect" value={isCreatingCustomer ? 'new' : selectedCustomerId} onChange={handleCustomerSelect} className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary">
+                                    <option value="new">+ Create New Customer</option>
+                                    <optgroup label="Existing Customers">
+                                        {customers.map(c => (
+                                            <option key={c._id} value={c._id}>{c.name} ({c.phone})</option>
+                                        ))}
+                                    </optgroup>
+                                </select>
+                            </div>
+                        )}
+                        
+                        {(isCreatingCustomer || booking) && (
+                            <>
+                                <div>
+                                    <label htmlFor="customerName" className="block text-sm font-medium text-gray-700">Customer Name</label>
+                                    <input type="text" name="customerName" id="customerName" value={formData.customerName} onChange={handleChange} required className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary" disabled={!isCreatingCustomer && !booking} />
+                                </div>
+                                <div>
+                                    <label htmlFor="customerPhone" className="block text-sm font-medium text-gray-700">Customer Phone</label>
+                                    <input type="tel" name="customerPhone" id="customerPhone" value={formData.customerPhone} onChange={handleChange} required className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary" disabled={!isCreatingCustomer && !booking} />
+                                </div>
+                            </>
+                        )}
+                        
                         <div>
                             <label htmlFor="variantId" className="block text-sm font-medium text-gray-700">Product</label>
                             <select name="variantId" id="variantId" value={formData.variantId} onChange={handleChange} required className="mt-1 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md p-2 focus:ring-primary focus:border-primary">
-                                {products.map(p => (
-                                    <optgroup label={`${p.brand} ${p.modelName}`} key={p._id}>
-                                        {p.variants.map(v => (
-                                            <option key={v._id} value={v._id}>{v.name} - Rs. {v.price.toLocaleString()}</option>
-                                        ))}
-                                    </optgroup>
-                                ))}
+                                {products.filter(p => p.isActive !== false).map(p => {
+                                    const activeVariants = p.variants.filter(v => v.isActive !== false);
+                                    if (activeVariants.length === 0) return null;
+                                    return (
+                                        <optgroup label={`${p.brand} ${p.modelName}`} key={p._id}>
+                                            {activeVariants.map(v => (
+                                                <option key={v._id} value={v._id}>{v.name} - Rs. {v.price.toLocaleString()}</option>
+                                            ))}
+                                        </optgroup>
+                                    );
+                                })}
                             </select>
+                            {formData.variantId && products.find(p => p.variants.some(v => v._id === formData.variantId))?.imageUrl && (
+                                <div className="mt-2">
+                                    <img src={products.find(p => p.variants.some(v => v._id === formData.variantId))?.imageUrl} alt="Product Preview" className="w-24 h-24 object-cover rounded-md border border-gray-200" referrerPolicy="no-referrer" />
+                                </div>
+                            )}
                         </div>
                         <div>
                             <label htmlFor="dealerId" className="block text-sm font-medium text-gray-700">Dealer</label>

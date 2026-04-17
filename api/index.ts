@@ -1,4 +1,4 @@
-import { Dealer, Product, StockItem, StockOrder, Booking, StockStatus, User, OrderStatus, Role, DealerPayment, Announcement, AnnouncementRecipient, Conversation, Message } from '../types';
+import { Dealer, Product, StockItem, StockOrder, Booking, Customer, StockStatus, User, OrderStatus, Role, DealerPayment, Announcement, AnnouncementRecipient, Conversation, Message } from '../types';
 import { supabase } from '../src/lib/supabase';
 
 export const mapToCamelCase = (obj: any) => {
@@ -120,6 +120,7 @@ export const api = {
   fetchStock: createFetchFunction<StockItem>('stock'),
   fetchStockOrders: createFetchFunction<StockOrder>('stock_orders'),
   fetchBookings: createFetchFunction<Booking>('bookings'),
+  fetchCustomers: createFetchFunction<Customer>('customers'),
   fetchDealerPayments: createFetchFunction<DealerPayment>('dealer_payments'),
   fetchAnnouncements: createFetchFunction<Announcement>('announcements'),
   fetchAnnouncementRecipients: createFetchFunction<AnnouncementRecipient>('announcement_recipients'),
@@ -132,9 +133,27 @@ export const api = {
   saveRole: createSaveFunction<Role>('roles'),
   saveDealer: createSaveFunction<Dealer>('dealers'),
   saveProduct: createSaveFunction<Product>('products'),
-  saveStockItem: createSaveFunction<StockItem>('stock'),
+  saveStockItem: async (item: StockItem): Promise<StockItem> => {
+    if (item.vin) {
+      const { data, error } = await supabase
+        .from('stock')
+        .select('_id')
+        .eq('vin', item.vin);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        const existingItem = data[0];
+        if (existingItem._id !== item._id) {
+          throw new Error(`A stock item with VIN ${item.vin} already exists.`);
+        }
+      }
+    }
+    return createSaveFunction<StockItem>('stock')(item);
+  },
   saveStockOrder: createSaveFunction<StockOrder>('stock_orders'),
   saveBooking: createSaveFunction<Booking>('bookings'),
+  saveCustomer: createSaveFunction<Customer>('customers'),
   saveDealerPayment: createSaveFunction<DealerPayment>('dealer_payments'),
   saveAnnouncement: createSaveFunction<Announcement>('announcements'),
   saveAnnouncementRecipient: createSaveFunction<AnnouncementRecipient>('announcement_recipients'),
@@ -144,6 +163,11 @@ export const api = {
 
   deleteUser: async (userId: string) => {
     const { error } = await supabase.from('users').delete().eq('_id', userId);
+    if (error) throw error;
+  },
+
+  deleteDealer: async (dealerId: string) => {
+    const { error } = await supabase.from('dealers').delete().eq('_id', dealerId);
     if (error) throw error;
   },
 

@@ -252,15 +252,15 @@ const Bookings: React.FC<{ showToast: (message: string, type: 'success' | 'error
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-4 w-full md:w-auto">
-                         <div className="flex items-center">
-                            <label className="text-sm font-medium text-slate-600 mr-2 shrink-0">Status:</label>
+                         <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                            <label className="text-sm font-medium text-slate-600 shrink-0">Status:</label>
                             <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value as BookingStatus | 'all'); setCurrentPage(1); }} className="p-2 border border-slate-300 rounded-md shadow-sm text-sm w-full md:w-32">
                                 <option value="all">All</option>
                                 {Object.values(BookingStatus).map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
-                         <div className="flex items-center">
-                            <label className="text-sm font-medium text-slate-600 mr-2 shrink-0">Dealer:</label>
+                         <div className="flex flex-col items-start md:flex-row md:items-center w-full md:w-auto gap-1 md:gap-2">
+                            <label className="text-sm font-medium text-slate-600 shrink-0">Dealer:</label>
                             <select value={dealerFilter} onChange={(e) => { setDealerFilter(e.target.value); setCurrentPage(1); }} className="p-2 border border-slate-300 rounded-md shadow-sm text-sm w-full md:w-40">
                                 <option value="all">All</option>
                                 {dealers.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}

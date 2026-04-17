@@ -19,6 +19,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [stock, setStock] = useState<StockItem[]>([]);
     const [stockOrders, setStockOrders] = useState<StockOrder[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
     const [dealerPayments, setDealerPayments] = useState<DealerPayment[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [announcementRecipients, setAnnouncementRecipients] = useState<AnnouncementRecipient[]>([]);
@@ -36,6 +37,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     stockData,
                     stockOrdersData,
                     bookingsData,
+                    customersData,
                     dealerPaymentsData,
                     announcementsData,
                     announcementRecipientsData,
@@ -47,6 +49,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     api.fetchStock(),
                     api.fetchStockOrders(),
                     api.fetchBookings(),
+                    api.fetchCustomers(),
                     api.fetchDealerPayments(),
                     api.fetchAnnouncements(),
                     api.fetchAnnouncementRecipients(),
@@ -58,6 +61,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setStock(stockData as StockItem[]);
                 setStockOrders(stockOrdersData as StockOrder[]);
                 setBookings(bookingsData as Booking[]);
+                setCustomers(customersData as Customer[]);
                 setDealerPayments(dealerPaymentsData as DealerPayment[]);
                 setAnnouncements(announcementsData as Announcement[]);
                 setAnnouncementRecipients(announcementRecipientsData as AnnouncementRecipient[]);
@@ -263,6 +267,14 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logAction(ActionType.Update, 'Dealers', savedDealer._id, `Updated details for ${savedDealer.name}`);
     };
 
+    const deleteDealer = async (dealerId: string) => {
+        const dealerToDelete = dealers.find(d => d._id === dealerId);
+        if (!dealerToDelete) return;
+        await api.deleteDealer(dealerId);
+        setDealers(prev => prev.filter(d => d._id !== dealerId));
+        logAction(ActionType.Delete, 'Dealers', dealerId, `Deleted dealer ${dealerToDelete.name}.`);
+    };
+
     const approveDealer = async (dealerId: string) => {
         const dealer = dealers.find(d => d._id === dealerId);
         if (!dealer) return;
@@ -425,6 +437,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const addStock = async (stockData: Omit<StockItem, '_id' | 'assignedAt'>) => {
+        if (stock.some(s => s.vin === stockData.vin)) {
+            throw new Error(`A stock item with VIN ${stockData.vin} already exists.`);
+        }
         const newStockItem: StockItem = {
             ...stockData,
             _id: `stock-${Date.now()}`,
@@ -433,6 +448,15 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const savedItem = await api.saveStockItem(newStockItem);
         setStock(prev => [savedItem, ...prev]);
         logAction(ActionType.Create, 'Stock', savedItem._id, `Added new stock item with VIN ${savedItem.vin}`);
+    };
+
+    const updateStockItem = async (stockId: string, updates: Partial<StockItem>) => {
+        const item = stock.find(s => s._id === stockId);
+        if (!item) return;
+        const updatedItem = { ...item, ...updates };
+        const savedItem = await api.saveStockItem(updatedItem);
+        setStock(prev => prev.map(s => s._id === stockId ? savedItem : s));
+        logAction(ActionType.Update, 'Stock', stockId, `Updated stock item ${item.vin}`);
     };
 
     const updateStockStatusBulk = async (stockIds: string[], status: StockStatus) => {
@@ -545,7 +569,37 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             }, ...prev]);
         }
     };
+
+    const cancelStockOrder = async (orderId: string) => {
+        const order = stockOrders.find(o => o._id === orderId);
+        if (!order) throw new Error("Order not found");
+        if (order.status !== OrderStatus.Pending) throw new Error("Only pending orders can be cancelled");
+
+        const updatedOrder = { ...order, status: OrderStatus.Cancelled };
+        const savedOrder = await api.saveStockOrder(updatedOrder);
+
+        setStockOrders(prev => prev.map(o => o._id === savedOrder._id ? savedOrder : o));
+        logAction(ActionType.Update, 'StockOrders', orderId, `Order #${orderId.slice(-4)} cancelled by dealer.`);
+    };
+
+    const updateStockOrder = async (updatedOrder: StockOrder) => {
+        const savedOrder = await api.saveStockOrder(updatedOrder);
+        setStockOrders(prev => prev.map(o => o._id === savedOrder._id ? savedOrder : o));
+        logAction(ActionType.Update, 'StockOrders', savedOrder._id, `Updated stock order #${savedOrder._id.slice(-4)}`);
+    };
     
+    const addCustomer = async (customerData: Omit<Customer, '_id' | 'createdAt'>) => {
+        const newCustomer: Customer = {
+            ...customerData,
+            _id: `cust-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+        };
+        const savedCustomer = await api.saveCustomer(newCustomer);
+        setCustomers(prev => [savedCustomer, ...prev]);
+        logAction(ActionType.Create, 'Customers', savedCustomer._id, `Added new customer ${savedCustomer.name}`);
+        return savedCustomer;
+    };
+
     const addBooking = async (bookingData: Omit<Booking, '_id' | 'bookingTimestamp' | 'payments' | 'stockItemId'>) => {
         const newBooking: Booking = {
             ...bookingData,
@@ -559,8 +613,24 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     const updateBooking = async (updatedBooking: Booking) => {
+        let savedStockItem: StockItem | null = null;
+        
+        // Check if status is changing to Delivered
+        if (updatedBooking.status === BookingStatus.Delivered && updatedBooking.stockItemId) {
+            const stockItemToUpdate = stock.find(s => s._id === updatedBooking.stockItemId);
+            if (stockItemToUpdate && stockItemToUpdate.status !== StockStatus.Sold) {
+                const updatedStockItem: StockItem = { ...stockItemToUpdate, status: StockStatus.Sold };
+                savedStockItem = await api.saveStockItem(updatedStockItem);
+            }
+        }
+
         const savedBooking = await api.saveBooking(updatedBooking);
+        
         setBookings(prev => prev.map(b => b._id === savedBooking._id ? savedBooking : b));
+        if (savedStockItem) {
+            setStock(prev => prev.map(s => s._id === savedStockItem!._id ? savedStockItem! : s));
+        }
+        
         logAction(ActionType.Update, 'Bookings', savedBooking._id, `Updated booking for ${savedBooking.customerName}`);
     };
 
@@ -744,15 +814,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     const value: DataContextType = {
-        isLoading, dealers, products, stock, stockOrders, bookings, dealerPayments, announcements, announcementRecipients,
+        isLoading, dealers, products, stock, stockOrders, bookings, customers, dealerPayments, announcements, announcementRecipients,
         conversations, messages,
-        addDealer, updateDealer, approveDealer, revokeDealer, updateDealerStatusBulk,
+        addDealer, updateDealer, deleteDealer, approveDealer, revokeDealer, updateDealerStatusBulk,
         recalculateReputation,
         registerDealer,
         addProduct, updateProduct, addOrUpdateProductsBulk,
         addStock,
-        updateStockStatusBulk, processAllocationRequest, dispatchStockOrder, confirmOrderReceipt, createStockOrder,
-        addBooking, updateBooking, cancelBooking, addPayment, addDealerPayment, allocateStockToBooking,
+        updateStockItem,
+        updateStockStatusBulk, processAllocationRequest, dispatchStockOrder, confirmOrderReceipt, createStockOrder, cancelStockOrder, updateStockOrder,
+        addBooking, updateBooking, cancelBooking, addCustomer, addPayment, addDealerPayment, allocateStockToBooking,
         addAnnouncement, markAnnouncementAsRead,
         sendMessage, markConversationAsRead,
         getRecommendationForItem,
